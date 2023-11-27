@@ -1,0 +1,23 @@
+[package]
+name = "zxcv"
+version = "0.1.0"
+description = "View the essential content of a URL."
+authors = ["Matthew Martin <phy1729@gmail.com>"]
+license = "ISC"
+repository = "https://github/phy1729/zxcv"
+categories = ["command-line-utilities", "visualization"]
+keywords = ["cli", "command", "url", "web"]
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+arboard = { version = "3", default-features = false }
+getopt = "1"
+percent-encoding = "2"
+pledge = "0.4"
+scraper = { version = "0.18", default-features = false }
+serde = { version = "1", features = ["derive"] }
+tempfile = "3"
+textwrap = "0.16"
+ureq = { version = "2", features = ["json"] }
+url = "2"

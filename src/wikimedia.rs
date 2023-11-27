@@ -1,0 +1,79 @@
+use std::collections::HashMap;
+
+use anyhow::bail;
+use anyhow::Context;
+use serde::Deserialize;
+use url::Url;
+
+use crate::Article;
+use crate::Content;
+use crate::TextType;
+
+pub(crate) fn process(url: &Url) -> anyhow::Result<Content> {
+    let api_url = url.join("/w/api.php")?;
+    let title = percent_encoding::percent_decode_str(
+        url.path_segments()
+            .and_then(|mut s| s.nth(1))
+            .context("Unexpected wikipedia URL format")?,
+    )
+    .decode_utf8()?;
+    let response: Response = ureq::get(api_url.as_str())
+        .query_pairs([
+            ("action", "query"),
+            ("format", "json"),
+            ("titles", &title),
+            ("prop", "revisions"),
+            ("rvprop", "content"),
+            ("rvslots", "main"),
+        ])
+        .call()?
+        .into_json()?;
+
+    let mut pages: Vec<_> = response.query.pages.into_values().collect();
+    let Some(mut page) = pages.pop() else {
+        bail!("Unexpected wikimedia pages value {pages:?}");
+    };
+
+    let Some(mut revision) = page.revisions.pop() else {
+        bail!("Unexpected wikimedia revisions {:?}", page.revisions);
+    };
+
+    if let Some(slot) = revision.slots.remove("main") {
+        Ok(Content::Text(TextType::Article(Article {
+            title: page.title,
+            body: slot.star,
+        })))
+    } else {
+        bail!(
+            "Wikimedia revision lacks main slot. {:?}",
+            page.revisions[0].slots
+        );
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct Response {
+    query: ResponseQuery,
+}
+
+#[derive(Debug, Deserialize)]
+struct ResponseQuery {
+    pages: HashMap<String, ResponsePage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ResponsePage {
+    title: String,
+    revisions: Vec<Revision>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Revision {
+    slots: HashMap<String, Slot>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Slot {
+    #[serde(rename = "*")]
+    star: String,
+}
