@@ -19,7 +19,10 @@
     rustdoc::missing_crate_level_docs,
     rustdoc::unescaped_backticks
 )]
-#![allow(clippy::multiple_crate_versions)]
+#![allow(
+    clippy::case_sensitive_file_extension_comparisons,
+    clippy::multiple_crate_versions
+)]
 
 use std::collections::HashMap;
 use std::env;
@@ -173,6 +176,13 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     };
                     url.set_path(&format!("/plain/{id}"));
                 }
+                process_generic(url)?
+            }
+
+            "dpaste.com" => {
+                if !url.path().ends_with(".txt") {
+                    url.set_path(&(url.path().to_owned() + ".txt"));
+                };
                 process_generic(url)?
             }
 
