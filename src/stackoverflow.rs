@@ -423,7 +423,7 @@ pub(crate) fn process(url: &Url) -> Option<anyhow::Result<Content>> {
             ))
             .call()?
             .into_json()?;
-            let Some(question) = dbg!(questions.items.pop()) else {
+            let Some(question) = questions.items.pop() else {
                 bail!("Unexpected question response: {questions:?}");
             };
 
