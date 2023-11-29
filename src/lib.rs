@@ -184,6 +184,8 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 process_generic(url)?
             }
 
+            "github.com" => github::process(url)?,
+
             "gist.github.com" => github::gist::process(url)?,
 
             "ibb.co" => image_via_selector(url, "#image-viewer-container > img")?,

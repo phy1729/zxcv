@@ -1,3 +1,25 @@
+use anyhow::bail;
+use url::Url;
+
+use crate::process_generic;
+use crate::Content;
+
+pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
+    let path_segments: Vec<_> = url
+        .path_segments()
+        .unwrap_or_else(|| "".split('/'))
+        .collect();
+
+    if path_segments.len() == 4 && path_segments[2] == "commit" {
+        if !path_segments[3].contains('.') {
+            url.set_path(&(url.path().to_owned() + ".patch"));
+        }
+        process_generic(url)
+    } else {
+        bail!("Unknown GitHub URL");
+    }
+}
+
 pub(crate) mod gist {
     use anyhow::Context;
     use scraper::Html;
