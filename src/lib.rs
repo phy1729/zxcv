@@ -49,8 +49,6 @@ use tempfile::NamedTempFile;
 use url::Url;
 
 mod github;
-use crate::github::process_github_gist;
-
 mod mastodon;
 mod nextcloud;
 mod stackoverflow;
@@ -186,7 +184,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 process_generic(url)?
             }
 
-            "gist.github.com" => process_github_gist(url)?,
+            "gist.github.com" => github::gist::process(url)?,
 
             "ibb.co" => image_via_selector(url, "#image-viewer-container > img")?,
 
@@ -223,7 +221,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     .1;
                 let url = Url::parse(&format!("https://gist.github.com/rust-play/{gist}"))
                     .expect("URL is valid");
-                process_github_gist(&url)?
+                github::gist::process(&url)?
             }
 
             "en.wikipedia.org" => wikimedia::process(url)?,
