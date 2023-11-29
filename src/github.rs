@@ -73,38 +73,38 @@ struct User {
 }
 
 pub(crate) mod gist {
-    use anyhow::Context;
-    use scraper::Html;
-    use scraper::Selector;
+    use std::collections::HashMap;
+
+    use anyhow::bail;
+    use serde::Deserialize;
     use url::Url;
 
-    use crate::process_generic;
     use crate::Content;
+    use crate::TextType;
 
     pub(crate) fn process(url: &Url) -> anyhow::Result<Content> {
-        let response = ureq::get(url.as_str()).call()?;
-        let tree = Html::parse_document(&response.into_string()?);
-        let selector = Selector::parse("a > span > span.Button-label").expect("selector is valid");
-        let results: Vec<_> = tree
-            .select(&selector)
-            .filter(|b| b.inner_html() == "Raw")
-            .collect();
-        if results.len() != 1 {
+        let Some(gist_id) = url.path_segments().and_then(|mut p| p.nth(1)) else {
+            bail!("Unknown Github Gist URL");
+        };
+        process_by_id(gist_id)
+    }
+
+    pub(crate) fn process_by_id(gist_id: &str) -> anyhow::Result<Content> {
+        let gist: Gist = super::request(&format!("{}/gists/{gist_id}", super::API_BASE))?;
+        if gist.files.len() != 1 {
             todo!("Handle more than one file in a gist")
         }
-        process_generic(
-            &url.join(
-                results[0]
-                    .parent()
-                    .expect("selector has parent")
-                    .parent()
-                    .expect("selector has grandparent")
-                    .value()
-                    .as_element()
-                    .expect("node is <a> in selector")
-                    .attr("href")
-                    .context("Raw button did not have href attribute")?,
-            )?,
-        )
+        let file = gist.files.into_values().next().expect("Checked above");
+        Ok(Content::Text(TextType::Raw(file.content)))
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct Gist {
+        files: HashMap<String, File>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct File {
+        content: String,
     }
 }

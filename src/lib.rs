@@ -216,14 +216,12 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
             }
 
             "play.integer32.com" | "play.rust-lang.org" => {
-                let gist = url
+                let gist_id = url
                     .query_pairs()
                     .find(|(k, _)| k == "gist")
                     .with_context(|| "Rust playground URL missing gist param")?
                     .1;
-                let url = Url::parse(&format!("https://gist.github.com/rust-play/{gist}"))
-                    .expect("URL is valid");
-                github::gist::process(&url)?
+                github::gist::process_by_id(&gist_id)?
             }
 
             "en.wikipedia.org" => wikimedia::process(url)?,
