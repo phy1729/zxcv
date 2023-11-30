@@ -49,6 +49,7 @@ use tempfile::NamedTempFile;
 use url::Url;
 
 mod github;
+mod lobsters;
 mod mastodon;
 mod nextcloud;
 mod stackoverflow;
@@ -200,6 +201,8 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     bail!("Unknown IETF URL");
                 }
             }
+
+            "lobste.rs" => lobsters::process(url)?,
 
             "marc.info" => {
                 url.query_pairs_mut().append_pair("q", "mbox");
