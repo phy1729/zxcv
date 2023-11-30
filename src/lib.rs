@@ -48,6 +48,7 @@ use scraper::Selector;
 use tempfile::NamedTempFile;
 use url::Url;
 
+mod cgit;
 mod github;
 mod lobsters;
 mod mastodon;
@@ -275,6 +276,7 @@ fn process_generic(url: &Url) -> anyhow::Result<Content> {
 
 fn process_html(url: &Url, tree: &Html) -> anyhow::Result<Content> {
     for process in [
+        cgit::process,
         mastodon::process,
         nextcloud::process,
         process_single_video,
