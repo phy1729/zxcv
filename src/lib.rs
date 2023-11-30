@@ -359,6 +359,8 @@ fn show_content(mut content: Content) -> anyhow::Result<()> {
                         .unwrap_or_else(|_| String::new())
                         .chars()
                         .filter(|c| !matches!(c, 'E' | 'e' | 'F'))
+                        // r is unsafe with untrusted input.
+                        .map(|c| if c == 'r' { 'R' } else { c })
                         .collect::<String>(),
                 );
             }
