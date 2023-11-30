@@ -206,6 +206,15 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 process_generic(url)?
             }
 
+            "mypy-play.net" => {
+                let gist_id = url
+                    .query_pairs()
+                    .find(|(k, _)| k == "gist")
+                    .with_context(|| "Mypy playground URL missing gist param")?
+                    .1;
+                github::gist::process_by_id(&gist_id)?
+            }
+
             "pastebin.com" => {
                 if url.path_segments().map_or(0, Iterator::count) == 1 {
                     url.set_path(&format!("/raw{}", url.path()));
