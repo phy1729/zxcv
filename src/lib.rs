@@ -424,6 +424,7 @@ fn render_html_text(html: &str) -> String {
         .descendants()
         .filter_map(|e| match e.value() {
             Node::Text(t) => Some(&**t),
+            Node::Element(e) if e.name() == "br" => Some("\n"),
             Node::Element(e) if e.name() == "p" => Some("\n\n"),
             _ => None,
         })
