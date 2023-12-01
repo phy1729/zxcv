@@ -5,6 +5,7 @@ use serde::Deserialize;
 use url::Url;
 
 use crate::render_html_text;
+use crate::select_single_element;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
@@ -12,7 +13,14 @@ use crate::TextType;
 
 pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     let selector = Selector::parse("div#mastodon").expect("selector is valid");
-    if !tree.select(&selector).any(|_| true) {
+    let is_mastodon = tree.select(&selector).any(|_| true);
+
+    // Sharkey implements the Mastodon API.
+    let is_sharkey = select_single_element(tree, "meta[name=\"application-name\"]")
+        .and_then(|e| e.attr("content"))
+        == Some("Sharkey");
+
+    if !(is_mastodon || is_sharkey) {
         return None;
     }
 
