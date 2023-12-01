@@ -220,12 +220,10 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
             }
 
             "pastebin.com" => {
-                if url.path_segments().map_or(0, Iterator::count) == 1 {
-                    url.set_path(&format!("/raw{}", url.path()));
-                    process_generic(url)?
-                } else {
-                    bail!("Unknown pastebin URL");
+                if !url.path().starts_with("/raw") {
+                    url.set_path(&("/raw".to_owned() + url.path()));
                 }
+                process_generic(url)?
             }
 
             "play.integer32.com" | "play.rust-lang.org" => {
