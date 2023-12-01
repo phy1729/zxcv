@@ -152,7 +152,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
     Ok(if let Some(hostname) = url.host_str() {
         match hostname {
             "bpa.st" => {
-                if !url.path().ends_with("/raw") {
+                if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
                     url.set_path(&(url.path().to_owned() + "/raw"));
                 };
                 process_generic(url)?
