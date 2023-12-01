@@ -44,7 +44,9 @@ fn main() -> anyhow::Result<()> {
         args.pop().expect("Checked above")
     };
 
-    pledge_promises!(Stdio Tmppath Inet Dns Proc Exec).expect("Initial pledge cannot fail");
+    pledge_promises!(Stdio Tmppath Inet Dns Proc Exec)
+        .or_else(pledge::Error::ignore_platform)
+        .expect("Initial pledge cannot fail");
 
     show_url(&url)
 }
