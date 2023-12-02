@@ -10,11 +10,14 @@ use getopt::Parser;
 use pledge::pledge_promises;
 
 use zxcv::show_url;
+use zxcv::Config;
 
 fn main() -> anyhow::Result<()> {
     let mut use_clipboard = false;
+    let mut config_file = None;
+
     let mut args: Vec<String> = env::args().collect();
-    let mut opts = Parser::new(&args, "c");
+    let mut opts = Parser::new(&args, "cf:");
     loop {
         match opts.next().transpose()? {
             None => break,
@@ -22,11 +25,20 @@ fn main() -> anyhow::Result<()> {
                 Opt('c', None) => {
                     use_clipboard = true;
                 }
+                Opt('f', Some(arg)) => config_file = Some(arg),
                 _ => unreachable!(),
             },
         }
     }
     args = args.split_off(opts.index());
+
+    let config = if let Some(config_file) = config_file {
+        Config::from_toml(
+            &std::fs::read_to_string(config_file).context("Failed to open config file")?,
+        )?
+    } else {
+        Config::default()
+    };
 
     let url = if use_clipboard {
         if !args.is_empty() {
@@ -48,5 +60,5 @@ fn main() -> anyhow::Result<()> {
         .or_else(pledge::Error::ignore_platform)
         .expect("Initial pledge cannot fail");
 
-    show_url(&url)
+    show_url(&config, &url)
 }

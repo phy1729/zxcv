@@ -16,8 +16,10 @@ getopt = "1"
 percent-encoding = "2"
 pledge = "0.4"
 scraper = { version = "0.18.1", default-features = false }
-serde = { version = "1.0.103", features = ["derive"] }
+# Increased for toml
+serde = { version = "1.0.145", features = ["derive"] }
 tempfile = "3"
 textwrap = "0.16"
+toml = { version = "0.8", default-features = false, features = ["parse"] }
 ureq = { version = "2.6.0", features = ["json"] }
 url = "2"

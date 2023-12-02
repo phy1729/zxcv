@@ -5,6 +5,11 @@
 //! `less`, `mupdf`, or `mpv`).
 //!
 //! Use the `-c` flag to pull the URL from the clipboard.
+//!
+//! # Configuration
+//!
+//! A configuration file may be passed via the `-f` flag. The configuration file is in
+//! [TOML](https://toml.io) format and the accepted sections are documented at [Config].
 #![warn(
     missing_debug_implementations,
     missing_docs,
@@ -47,6 +52,9 @@ use scraper::Node;
 use scraper::Selector;
 use tempfile::NamedTempFile;
 use url::Url;
+
+mod config;
+pub use config::Config;
 
 mod cgit;
 mod github;
@@ -136,7 +144,7 @@ impl Display for TextType {
 ///
 /// The particular `Error` that `anyhow` wraps is not part of API stability promises and may change
 /// without a major version bump.
-pub fn show_url(url: &str) -> anyhow::Result<()> {
+pub fn show_url(config: &Config, url: &str) -> anyhow::Result<()> {
     let mut url = Url::parse(url)?;
     if url.cannot_be_a_base() {
         bail!("Non-absolute URL");
@@ -145,7 +153,7 @@ pub fn show_url(url: &str) -> anyhow::Result<()> {
         bail!("Unsupported URL scheme");
     }
 
-    show_content(get_content(&mut url)?)
+    show_content(config, get_content(&mut url)?)
 }
 
 fn get_content(url: &mut Url) -> anyhow::Result<Content> {
@@ -337,13 +345,10 @@ fn image_via_selector(url: &Url, selector: &str) -> anyhow::Result<Content> {
     process_generic(&url)
 }
 
-fn show_content(mut content: Content) -> anyhow::Result<()> {
-    let argv = match content {
-        Content::Image(_) | Content::Pdf(_) => vec!["mupdf", "--", "%f"],
-        Content::Text(_) => vec!["xterm", "-e", "%p", "--", "%f"],
-        Content::Video(_) => vec!["mpv", "--", "%u"],
-    };
+fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
+    let argv = config.get_argv(&content);
 
+    // replacements are documented with Config.
     let (file, mut replacements): (Option<NamedTempFile>, HashMap<char, OsString>) = match content {
         Content::Image(ref mut reader) | Content::Pdf(ref mut reader) => {
             let mut file = NamedTempFile::new()?;
@@ -377,7 +382,7 @@ fn show_content(mut content: Content) -> anyhow::Result<()> {
         replacements.insert('f', file.path().into());
     }
 
-    let mut command = Command::new(argv[0]);
+    let mut command = Command::new(&argv[0]);
     command.args(
         argv[1..]
             .iter()
