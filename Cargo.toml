@@ -10,14 +10,14 @@ keywords = ["cli", "command", "url", "web"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1"
+anyhow = "1.0.14"
 arboard = { version = "3", default-features = false }
 getopt = "1"
 percent-encoding = "2"
 pledge = "0.4"
-scraper = { version = "0.18", default-features = false }
-serde = { version = "1", features = ["derive"] }
+scraper = { version = "0.18.1", default-features = false }
+serde = { version = "1.0.103", features = ["derive"] }
 tempfile = "3"
 textwrap = "0.16"
-ureq = { version = "2", features = ["json"] }
+ureq = { version = "2.6.0", features = ["json"] }
 url = "2"
