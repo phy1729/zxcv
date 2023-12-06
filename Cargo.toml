@@ -11,7 +11,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.14"
-arboard = { version = "3", default-features = false }
 getopt = "1"
 percent-encoding = "2"
 pledge = "0.4"

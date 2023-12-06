@@ -4,8 +4,6 @@
 //! of a youtube link) and runs an appropriate command to display that content locally (e.g.
 //! `less`, `mupdf`, or `mpv`).
 //!
-//! Use the `-c` flag to pull the URL from the clipboard.
-//!
 //! # Configuration
 //!
 //! A configuration file may be passed via the `-f` flag. The configuration file is in
