@@ -102,29 +102,29 @@ struct PostThread {
     after: Vec<Post>,
 }
 
-impl Display for TextType {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+impl TextType {
+    fn write(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             Self::Article(article) => {
                 write!(
-                    f,
+                    writer,
                     "{}\n\n{}",
                     article.title,
                     textwrap::fill(&article.body, 80)
                 )
             }
-            Self::Post(post) => write!(f, "{post}"),
+            Self::Post(post) => write!(writer, "{post}"),
             Self::PostThread(thread) => {
                 let post_chain = thread
                     .before
                     .iter()
                     .chain(iter::once(&thread.main))
                     .chain(&thread.after);
-                post_chain
-                    .enumerate()
-                    .try_for_each(|(i, p)| write!(f, "{}{p}", if i == 0 { "" } else { "\n\n" }))
+                post_chain.enumerate().try_for_each(|(i, p)| {
+                    write!(writer, "{}{p}", if i == 0 { "" } else { "\n\n" })
+                })
             }
-            Self::Raw(string) => write!(f, "{string}"),
+            Self::Raw(string) => write!(writer, "{string}"),
         }
     }
 }
@@ -356,7 +356,7 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
 
         Content::Text(text) => {
             let mut file = NamedTempFile::new()?;
-            write!(file, "{text}")?;
+            text.write(&mut file)?;
             let pager = env::var("PAGER").unwrap_or_else(|_| "less".to_owned());
             if pager == "less" {
                 env::set_var(
