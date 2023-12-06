@@ -33,14 +33,13 @@ fn main() -> anyhow::Result<()> {
         Config::default()
     };
 
-    if args.len() != 1 {
+    let [url] = args.as_slice() else {
         bail!("One argument is required");
-    }
-    let url = args.pop().expect("Checked above");
+    };
 
     pledge_promises!(Stdio Tmppath Inet Dns Proc Exec)
         .or_else(pledge::Error::ignore_platform)
         .expect("Initial pledge cannot fail");
 
-    show_url(&config, &url)
+    show_url(&config, url)
 }
