@@ -73,7 +73,7 @@ enum TextType {
     Article(Article),
     Post(Post),
     PostThread(PostThread),
-    Raw(String),
+    Raw(Vec<u8>),
 }
 
 struct Article {
@@ -124,7 +124,7 @@ impl TextType {
                     write!(writer, "{}{p}", if i == 0 { "" } else { "\n\n" })
                 })
             }
-            Self::Raw(string) => write!(writer, "{string}"),
+            Self::Raw(bytes) => writer.write_all(bytes),
         }
     }
 }
@@ -271,7 +271,18 @@ fn process_generic(url: &Url) -> anyhow::Result<Content> {
         }
         "text/html" => process_html(url, &Html::parse_document(&response.into_string()?))?,
         "text/plain" | "text/x-shellscript" => {
-            Content::Text(TextType::Raw(response.into_string()?))
+            const MAX_RAW_LEN: u32 = 1024 * 1024;
+            let capacity = response
+                .header("Content-Length")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0);
+            let mut body: Vec<u8> =
+                Vec::with_capacity(std::cmp::min(capacity, MAX_RAW_LEN as usize));
+            response
+                .into_reader()
+                .take(u64::from(MAX_RAW_LEN))
+                .read_to_end(&mut body)?;
+            Content::Text(TextType::Raw(body))
         }
         "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(url.to_string()),
         _ => bail!("Content type {content_type} is not supported."),
@@ -291,7 +302,7 @@ fn process_html(url: &Url, tree: &Html) -> anyhow::Result<Content> {
         }
     }
 
-    Ok(Content::Text(TextType::Raw(tree.html())))
+    Ok(Content::Text(TextType::Raw(tree.html().into())))
 }
 
 fn process_single_video(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
@@ -321,7 +332,8 @@ fn process_single_video(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
 }
 
 fn process_single_pre(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    select_single_element(tree, "pre").map(|p| Ok(Content::Text(TextType::Raw(p.inner_html()))))
+    select_single_element(tree, "pre")
+        .map(|p| Ok(Content::Text(TextType::Raw(p.inner_html().into()))))
 }
 
 /// Display the image specfied by `selector`.

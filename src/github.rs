@@ -95,7 +95,7 @@ pub(crate) mod gist {
             todo!("Handle more than one file in a gist")
         }
         let file = gist.files.into_values().next().expect("Checked above");
-        Ok(Content::Text(TextType::Raw(file.content)))
+        Ok(Content::Text(TextType::Raw(file.content.into())))
     }
 
     #[derive(Debug, Deserialize)]
