@@ -1029,6 +1029,7 @@ name = "zxcv"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "getopt",
  "percent-encoding",
  "pledge",
