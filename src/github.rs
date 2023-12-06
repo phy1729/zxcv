@@ -1,4 +1,5 @@
 use anyhow::bail;
+use base64::Engine;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use url::Url;
@@ -17,7 +18,18 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
         .unwrap_or_else(|| "".split('/'))
         .collect();
 
-    if path_segments.len() == 4 && path_segments[2] == "commit" {
+    if path_segments.len() == 2 {
+        let readme: Readme = request(&format!("{API_BASE}/repos{}/readme", url.path()))?;
+        Ok(Content::Text(TextType::Raw(
+            base64::engine::general_purpose::STANDARD.decode(
+                readme
+                    .content
+                    .bytes()
+                    .filter(|c| *c != b'\n')
+                    .collect::<Vec<_>>(),
+            )?,
+        )))
+    } else if path_segments.len() == 4 && path_segments[2] == "commit" {
         if !path_segments[3].contains('.') {
             url.set_path(&(url.path().to_owned() + ".patch"));
         }
@@ -65,6 +77,11 @@ struct Issue {
     body: String,
     comments_url: String,
     user: User,
+}
+
+#[derive(Debug, Deserialize)]
+struct Readme {
+    content: String,
 }
 
 #[derive(Debug, Deserialize)]
