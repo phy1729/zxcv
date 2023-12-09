@@ -21,6 +21,15 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
     if path_segments.len() == 2 {
         let readme = request_raw(&format!("{API_BASE}/repos{}/readme", url.path()))?;
         Ok(Content::Text(TextType::Raw(readme)))
+    } else if path_segments.len() >= 5 && path_segments[2] == "blob" {
+        let contents = request_raw(&format!(
+            "{API_BASE}/repos/{}/{}/contents/{}?ref={}",
+            path_segments[0],
+            path_segments[1],
+            path_segments[4..].join("/"),
+            path_segments[3],
+        ))?;
+        Ok(Content::Text(TextType::Raw(contents)))
     } else if path_segments.len() == 4 && path_segments[2] == "commit" {
         if !path_segments[3].contains('.') {
             url.set_path(&(url.path().to_owned() + ".patch"));
