@@ -9,8 +9,10 @@ use crate::Content;
 use crate::TextType;
 
 pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    if select_single_element(tree, "meta[name=\"keywords\"]").and_then(|e| e.attr("content"))
-        != Some("go,git,self-hosted,gitea")
+    if select_single_element(tree, "meta[name=\"keywords\"]")
+        .and_then(|e| e.attr("content"))
+        .map(|c| c.split(',').any(|t| t == "gitea"))
+        != Some(true)
     {
         return None;
     }
