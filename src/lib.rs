@@ -199,6 +199,13 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 process_generic(url)?
             }
 
+            "dpaste.org" => {
+                if !url.path().ends_with("/raw") {
+                    url.set_path(&(url.path().to_owned() + "/raw"));
+                };
+                process_generic(url)?
+            }
+
             "github.com" => github::process(url)?,
 
             "gist.github.com" => github::gist::process(url)?,
