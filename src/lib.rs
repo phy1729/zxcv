@@ -278,18 +278,7 @@ fn process_generic(url: &Url) -> anyhow::Result<Content> {
         }
         "text/html" => process_html(url, &Html::parse_document(&response.into_string()?))?,
         "text/plain" | "text/x-shellscript" => {
-            const MAX_RAW_LEN: u32 = 1024 * 1024;
-            let capacity = response
-                .header("Content-Length")
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(0);
-            let mut body: Vec<u8> =
-                Vec::with_capacity(std::cmp::min(capacity, MAX_RAW_LEN as usize));
-            response
-                .into_reader()
-                .take(u64::from(MAX_RAW_LEN))
-                .read_to_end(&mut body)?;
-            Content::Text(TextType::Raw(body))
+            Content::Text(TextType::Raw(read_raw_response(response)?))
         }
         "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(url.to_string()),
         _ => bail!("Content type {content_type} is not supported."),
@@ -439,6 +428,21 @@ fn select_single_element<'a>(tree: &'a Html, selector_string: &str) -> Option<El
         (Some(element), None) => Some(element),
         _ => None,
     }
+}
+
+#[allow(clippy::result_large_err)]
+fn read_raw_response(response: ureq::Response) -> Result<Vec<u8>, ureq::Error> {
+    const MAX_RAW_LEN: u32 = 1024 * 1024;
+    let capacity = response
+        .header("Content-Length")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    let mut body: Vec<u8> = Vec::with_capacity(std::cmp::min(capacity, MAX_RAW_LEN as usize));
+    response
+        .into_reader()
+        .take(u64::from(MAX_RAW_LEN))
+        .read_to_end(&mut body)?;
+    Ok(body)
 }
 
 fn render_html_text(html: &str) -> String {
