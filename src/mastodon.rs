@@ -11,6 +11,11 @@ use crate::PostThread;
 use crate::TextType;
 
 pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+    // Akkoma implements the Mastodon API with some differences.
+    let is_akkoma = select_single_element(tree, "noscript")
+        .map(|e| e.inner_html().contains("Akkoma"))
+        == Some(true);
+
     let is_mastodon = select_single_element(tree, "div#mastodon").is_some();
 
     // Sharkey implements the Mastodon API.
@@ -18,7 +23,7 @@ pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
         .and_then(|e| e.attr("content"))
         == Some("Sharkey");
 
-    if !(is_mastodon || is_sharkey) {
+    if !(is_akkoma || is_mastodon || is_sharkey) {
         return None;
     }
 
