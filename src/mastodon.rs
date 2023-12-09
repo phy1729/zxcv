@@ -1,6 +1,5 @@
 use anyhow::Context;
 use scraper::Html;
-use scraper::Selector;
 use serde::Deserialize;
 use url::Url;
 
@@ -12,8 +11,7 @@ use crate::PostThread;
 use crate::TextType;
 
 pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    let selector = Selector::parse("div#mastodon").expect("selector is valid");
-    let is_mastodon = tree.select(&selector).any(|_| true);
+    let is_mastodon = select_single_element(tree, "div#mastodon").is_some();
 
     // Sharkey implements the Mastodon API.
     let is_sharkey = select_single_element(tree, "meta[name=\"application-name\"]")
