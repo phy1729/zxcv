@@ -430,6 +430,7 @@ pub(crate) fn process(url: &Url) -> Option<anyhow::Result<Content>> {
             let question_post = Post {
                 author: question.owner.display_name,
                 body: render_html_text(&question.body),
+                urls: vec![],
             };
 
             Ok(Content::Text(TextType::PostThread(
@@ -491,6 +492,7 @@ impl From<Answer> for Post {
         Self {
             author: render_html_text(&answer.owner.display_name),
             body: render_html_text(&answer.body),
+            urls: vec![],
         }
     }
 }

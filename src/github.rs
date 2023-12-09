@@ -43,12 +43,14 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
             main: Post {
                 author: issue.user.login,
                 body: issue.body,
+                urls: vec![],
             },
             after: comments
                 .into_iter()
                 .map(|c| Post {
                     author: c.user.login,
                     body: c.body,
+                    urls: vec![],
                 })
                 .collect(),
         })))

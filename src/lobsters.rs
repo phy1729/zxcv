@@ -29,6 +29,7 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
         main: Post {
             author: story.submitter_user.username,
             body,
+            urls: vec![],
         },
         after: story
             .comments
@@ -36,6 +37,7 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
             .map(|c| Post {
                 author: c.commenting_user.username,
                 body: c.comment_plain,
+                urls: vec![],
             })
             .collect(),
     })))

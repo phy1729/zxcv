@@ -57,6 +57,7 @@ impl From<Status> for Post {
         Self {
             author: status.account.display_name,
             body: render_html_text(&status.content),
+            urls: vec![],
         }
     }
 }

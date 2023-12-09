@@ -85,6 +85,7 @@ struct Article {
 struct Post {
     author: String,
     body: String,
+    urls: Vec<String>,
 }
 
 impl Display for Post {
@@ -93,7 +94,12 @@ impl Display for Post {
             f,
             "{}",
             textwrap::fill(&format!("<{}> {}", self.author, self.body), 80)
-        )
+        )?;
+        if !self.urls.is_empty() {
+            writeln!(f)?;
+            self.urls.iter().try_for_each(|u| write!(f, "\n{u}"))?;
+        }
+        Ok(())
     }
 }
 
