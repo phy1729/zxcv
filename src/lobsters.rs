@@ -19,7 +19,7 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
     }
 
     let story: Story = ureq::get(url.as_str()).call()?.into_json()?;
-    let mut body = format!("{}\n{}", story.title, story.url);
+    let mut body = story.title.clone();
     if !story.description_plain.is_empty() {
         write!(body, "\n{}", story.description_plain).expect("write! to String cannot fail");
     }
@@ -29,7 +29,7 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
         main: Post {
             author: story.submitter_user.username,
             body,
-            urls: vec![],
+            urls: vec![story.url],
         },
         after: story
             .comments
