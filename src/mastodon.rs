@@ -50,6 +50,7 @@ pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
 struct Status {
     content: String,
     account: Account,
+    media_attachments: Vec<MediaAttachment>,
 }
 
 impl From<Status> for Post {
@@ -57,7 +58,11 @@ impl From<Status> for Post {
         Self {
             author: status.account.display_name,
             body: render_html_text(&status.content),
-            urls: vec![],
+            urls: status
+                .media_attachments
+                .into_iter()
+                .map(|a| a.url)
+                .collect(),
         }
     }
 }
@@ -65,6 +70,11 @@ impl From<Status> for Post {
 #[derive(Debug, Deserialize)]
 struct Account {
     display_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct MediaAttachment {
+    url: String,
 }
 
 #[derive(Debug, Deserialize)]
