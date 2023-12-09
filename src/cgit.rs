@@ -1,4 +1,5 @@
 use anyhow::bail;
+use anyhow::Context;
 use scraper::Html;
 use url::Url;
 
@@ -16,20 +17,23 @@ pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
     }
 
     Some((|| {
+        let repo_path = select_single_element(tree, "table.tabs a:first-child")
+            .context("cgit page missing summary link")?
+            .attr("href")
+            .expect("a element has href attribute");
+
         let path_segments: Vec<_> = url
-            .path_segments()
-            .unwrap_or_else(|| "".split('/'))
+            .path()
+            .strip_prefix(repo_path)
+            .context("cgit URL path does not start with repo path")?
+            .split('/')
             .collect();
 
-        let Some(repo_index) = path_segments.iter().position(|s| s.ends_with(".git")) else {
-            bail!("cgit URL missing repository");
-        };
-
-        if path_segments.len() > repo_index + 2 && path_segments[repo_index + 1] == "tree" {
+        if path_segments.len() >= 2 && path_segments[0] == "tree" {
             let url = url.join(&format!(
-                "/{}/plain/{}",
-                path_segments[0..=repo_index].join("/"),
-                path_segments[repo_index + 2..].join("/")
+                "{}/plain/{}",
+                repo_path,
+                path_segments[1..].join("/")
             ))?;
             process_generic(&url)
         } else {
