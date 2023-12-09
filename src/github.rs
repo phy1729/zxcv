@@ -1,10 +1,10 @@
 use anyhow::bail;
-use base64::Engine;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use url::Url;
 
 use crate::process_generic;
+use crate::read_raw_response;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
@@ -19,16 +19,8 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
         .collect();
 
     if path_segments.len() == 2 {
-        let readme: Readme = request(&format!("{API_BASE}/repos{}/readme", url.path()))?;
-        Ok(Content::Text(TextType::Raw(
-            base64::engine::general_purpose::STANDARD.decode(
-                readme
-                    .content
-                    .bytes()
-                    .filter(|c| *c != b'\n')
-                    .collect::<Vec<_>>(),
-            )?,
-        )))
+        let readme = request_raw(&format!("{API_BASE}/repos{}/readme", url.path()))?;
+        Ok(Content::Text(TextType::Raw(readme)))
     } else if path_segments.len() == 4 && path_segments[2] == "commit" {
         if !path_segments[3].contains('.') {
             url.set_path(&(url.path().to_owned() + ".patch"));
@@ -68,6 +60,15 @@ fn request<T: DeserializeOwned>(url: &str) -> Result<T, ureq::Error> {
         .into_json()?)
 }
 
+#[allow(clippy::result_large_err)]
+fn request_raw(url: &str) -> Result<Vec<u8>, ureq::Error> {
+    let response = ureq::get(url)
+        .set("Accept", "application/vnd.github.raw")
+        .set("X-GitHub-Api-Version", "2022-11-28")
+        .call()?;
+    read_raw_response(response)
+}
+
 #[derive(Debug, Deserialize)]
 struct Comment {
     body: String,
@@ -79,11 +80,6 @@ struct Issue {
     body: String,
     comments_url: String,
     user: User,
-}
-
-#[derive(Debug, Deserialize)]
-struct Readme {
-    content: String,
 }
 
 #[derive(Debug, Deserialize)]
