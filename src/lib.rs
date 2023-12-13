@@ -322,7 +322,12 @@ fn process_single_video(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
         for child in video.children() {
             if let Node::Element(element) = child.value() {
                 if element.name() == "source" {
-                    if !matches!(element.attr("type"), Some("video/mp4")) {
+                    if !matches!(
+                        element
+                            .attr("type")
+                            .map(|t| t.split_once(';').map_or(t, |t| t.0)),
+                        Some("video/mp4")
+                    ) {
                         continue;
                     }
                     if let Some(url) = element.attr("src") {
