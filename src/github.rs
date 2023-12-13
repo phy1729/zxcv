@@ -21,6 +21,8 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
     if path_segments.len() == 2 {
         let readme = request_raw(&format!("{API_BASE}/repos{}/readme", url.path()))?;
         Ok(Content::Text(TextType::Raw(readme)))
+    } else if path_segments.len() >= 4 && path_segments[2] == "assets" {
+        process_generic(url)
     } else if path_segments.len() >= 5 && path_segments[2] == "blob" {
         let contents = request_raw(&format!(
             "{API_BASE}/repos/{}/{}/contents/{}?ref={}",
