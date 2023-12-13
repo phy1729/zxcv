@@ -309,14 +309,14 @@ fn process_html(url: &Url, tree: &Html) -> anyhow::Result<Content> {
     Ok(Content::Text(TextType::Raw(tree.html().into())))
 }
 
-fn process_single_video(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+fn process_single_video(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     let Some(video) = select_single_element(tree, "video") else {
         return None;
     };
 
     Some((|| {
         if let Some(src) = video.attr("src") {
-            return Ok(Content::Video(src.to_owned()));
+            return Ok(Content::Video(url.join(src)?.to_string()));
         }
 
         for child in video.children() {
@@ -330,8 +330,8 @@ fn process_single_video(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
                     ) {
                         continue;
                     }
-                    if let Some(url) = element.attr("src") {
-                        return Ok(Content::Video(url.to_owned()));
+                    if let Some(src) = element.attr("src") {
+                        return Ok(Content::Video(url.join(src)?.to_string()));
                     }
                 }
             }
