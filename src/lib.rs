@@ -67,7 +67,7 @@ enum Content {
     Image(Box<dyn Read>),
     Pdf(Box<dyn Read>),
     Text(TextType),
-    Video(String), // URL
+    Video(Url),
 }
 
 enum TextType {
@@ -259,7 +259,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
 
             "xkcd.com" => image_via_selector(url, "#comic > img")?,
 
-            "youtu.be" | "youtube.com" | "www.youtube.com" => Content::Video(url.to_string()),
+            "youtu.be" | "youtube.com" | "www.youtube.com" => Content::Video(url.clone()),
 
             _ => {
                 if let Some(result) = stackoverflow::process(url) {
@@ -287,7 +287,7 @@ fn process_generic(url: &Url) -> anyhow::Result<Content> {
         "text/plain" | "text/x-shellscript" => {
             Content::Text(TextType::Raw(read_raw_response(response)?))
         }
-        "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(url.to_string()),
+        "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(url.clone()),
         _ => bail!("Content type {content_type} is not supported."),
     })
 }
@@ -316,7 +316,7 @@ fn process_single_video(url: &Url, tree: &Html) -> Option<anyhow::Result<Content
 
     Some((|| {
         if let Some(src) = video.attr("src") {
-            return Ok(Content::Video(url.join(src)?.to_string()));
+            return Ok(Content::Video(url.join(src)?));
         }
 
         for child in video.children() {
@@ -331,7 +331,7 @@ fn process_single_video(url: &Url, tree: &Html) -> Option<anyhow::Result<Content
                         continue;
                     }
                     if let Some(src) = element.attr("src") {
-                        return Ok(Content::Video(url.join(src)?.to_string()));
+                        return Ok(Content::Video(url.join(src)?));
                     }
                 }
             }
@@ -394,7 +394,7 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
             (Some(file), [('p', pager.into())].into())
         }
 
-        Content::Video(url) => (None, [('u', url.into())].into()),
+        Content::Video(url) => (None, [('u', url.as_str().into())].into()),
     };
 
     if let Some(file) = &file {
