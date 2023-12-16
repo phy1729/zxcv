@@ -62,8 +62,7 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
     }
 }
 
-#[allow(clippy::result_large_err)]
-fn request<T: DeserializeOwned>(url: &str) -> Result<T, ureq::Error> {
+fn request<T: DeserializeOwned>(url: &str) -> anyhow::Result<T> {
     Ok(ureq::get(url)
         .set("Accept", "application/vnd.github+json")
         .set("X-GitHub-Api-Version", "2022-11-28")
@@ -71,13 +70,12 @@ fn request<T: DeserializeOwned>(url: &str) -> Result<T, ureq::Error> {
         .into_json()?)
 }
 
-#[allow(clippy::result_large_err)]
-fn request_raw(url: &str) -> Result<Vec<u8>, ureq::Error> {
+fn request_raw(url: &str) -> anyhow::Result<Vec<u8>> {
     let response = ureq::get(url)
         .set("Accept", "application/vnd.github.raw")
         .set("X-GitHub-Api-Version", "2022-11-28")
         .call()?;
-    read_raw_response(response)
+    Ok(read_raw_response(response)?)
 }
 
 #[derive(Debug, Deserialize)]

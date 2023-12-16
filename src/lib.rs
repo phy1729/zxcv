@@ -442,8 +442,7 @@ fn select_single_element<'a>(tree: &'a Html, selector_string: &str) -> Option<El
     }
 }
 
-#[allow(clippy::result_large_err)]
-fn read_raw_response(response: ureq::Response) -> Result<Vec<u8>, ureq::Error> {
+fn read_raw_response(response: ureq::Response) -> io::Result<Vec<u8>> {
     const MAX_RAW_LEN: u32 = 1024 * 1024;
     let capacity = response
         .header("Content-Length")
