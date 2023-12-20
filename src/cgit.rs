@@ -1,13 +1,14 @@
 use anyhow::bail;
 use anyhow::Context;
 use scraper::Html;
+use ureq::Agent;
 use url::Url;
 
 use crate::process_generic;
 use crate::select_single_element;
 use crate::Content;
 
-pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     if select_single_element(tree, "meta[name=\"generator\"]")
         .and_then(|e| e.attr("content"))
         .map(|c| c.starts_with("cgit "))
@@ -35,7 +36,7 @@ pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
                 repo_path,
                 path_segments[1..].join("/")
             ))?;
-            process_generic(&url)
+            process_generic(agent, &url)
         } else {
             bail!("Unknown cgit URL");
         }

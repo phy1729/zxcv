@@ -49,6 +49,7 @@ use scraper::Html;
 use scraper::Node;
 use scraper::Selector;
 use tempfile::NamedTempFile;
+use ureq::Agent;
 use url::Url;
 
 mod config;
@@ -162,13 +163,15 @@ pub fn show_url(config: &Config, url: &str) -> anyhow::Result<()> {
 }
 
 fn get_content(url: &mut Url) -> anyhow::Result<Content> {
+    let agent = Agent::new();
+
     Ok(if let Some(hostname) = url.host_str() {
         match hostname {
             "bpa.st" => {
                 if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
                     url.set_path(&(url.path().to_owned() + "/raw"));
                 };
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
 
             "p.dav1d.de" => {
@@ -176,7 +179,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     #[allow(clippy::unnecessary_to_owned)]
                     url.set_path(&raw_path.to_owned());
                 }
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
 
             "paste.debian.net" => {
@@ -189,32 +192,33 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     };
                     url.set_path(&format!("/plain/{id}"));
                 }
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
 
             "dpaste.com" => {
                 if !url.path().ends_with(".txt") {
                     url.set_path(&(url.path().to_owned() + ".txt"));
                 };
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
 
             "dpaste.org" => {
                 if !url.path().ends_with("/raw") {
                     url.set_path(&(url.path().to_owned() + "/raw"));
                 };
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
 
-            "github.com" => github::process(url)?,
+            "github.com" => github::process(&agent, url)?,
 
-            "gist.github.com" => github::gist::process(url)?,
+            "gist.github.com" => github::gist::process(&agent, url)?,
 
-            "ibb.co" => image_via_selector(url, "#image-viewer-container > img")?,
+            "ibb.co" => image_via_selector(&agent, url, "#image-viewer-container > img")?,
 
             "datatracker.ietf.org" => {
                 if let Some(id) = url.path().strip_prefix("/doc/html/") {
                     process_generic(
+                        &agent,
                         &Url::parse(&format!("https://www.ietf.org/archive/id/{id}.txt"))
                             .expect("URL is valid"),
                     )?
@@ -223,11 +227,11 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 }
             }
 
-            "lobste.rs" => lobsters::process(url)?,
+            "lobste.rs" => lobsters::process(&agent, url)?,
 
             "marc.info" => {
                 url.query_pairs_mut().append_pair("q", "mbox");
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
 
             "mypy-play.net" => {
@@ -236,14 +240,14 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     .find(|(k, _)| k == "gist")
                     .with_context(|| "Mypy playground URL missing gist param")?
                     .1;
-                github::gist::process_by_id(&gist_id)?
+                github::gist::process_by_id(&agent, &gist_id)?
             }
 
             "pastebin.com" => {
                 if !url.path().starts_with("/raw") {
                     url.set_path(&("/raw".to_owned() + url.path()));
                 }
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
 
             "play.integer32.com" | "play.rust-lang.org" => {
@@ -252,30 +256,30 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     .find(|(k, _)| k == "gist")
                     .with_context(|| "Rust playground URL missing gist param")?
                     .1;
-                github::gist::process_by_id(&gist_id)?
+                github::gist::process_by_id(&agent, &gist_id)?
             }
 
-            "en.wikipedia.org" => wikimedia::process(url)?,
+            "en.wikipedia.org" => wikimedia::process(&agent, url)?,
 
-            "xkcd.com" => image_via_selector(url, "#comic > img")?,
+            "xkcd.com" => image_via_selector(&agent, url, "#comic > img")?,
 
             "youtu.be" | "youtube.com" | "www.youtube.com" => Content::Video(url.clone()),
 
             _ => {
-                if let Some(result) = stackoverflow::process(url) {
+                if let Some(result) = stackoverflow::process(&agent, url) {
                     return result;
                 }
 
-                process_generic(url)?
+                process_generic(&agent, url)?
             }
         }
     } else {
-        process_generic(url)?
+        process_generic(&agent, url)?
     })
 }
 
-fn process_generic(url: &Url) -> anyhow::Result<Content> {
-    let response = ureq::get(url.as_str()).call()?;
+fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
+    let response = agent.request_url("GET", url).call()?;
     let content_type = response.content_type().to_owned();
 
     Ok(match content_type.as_str() {
@@ -283,7 +287,7 @@ fn process_generic(url: &Url) -> anyhow::Result<Content> {
         "image/gif" | "image/jpeg" | "image/png" | "image/svg+xml" => {
             Content::Image(response.into_reader())
         }
-        "text/html" => process_html(url, &Html::parse_document(&response.into_string()?))?,
+        "text/html" => process_html(agent, url, &Html::parse_document(&response.into_string()?))?,
         "text/plain" | "text/x-shellscript" => {
             Content::Text(TextType::Raw(read_raw_response(response)?))
         }
@@ -292,7 +296,7 @@ fn process_generic(url: &Url) -> anyhow::Result<Content> {
     })
 }
 
-fn process_html(url: &Url, tree: &Html) -> anyhow::Result<Content> {
+fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content> {
     for process in [
         cgit::process,
         gitea::process,
@@ -301,7 +305,7 @@ fn process_html(url: &Url, tree: &Html) -> anyhow::Result<Content> {
         process_single_video,
         process_single_pre,
     ] {
-        if let Some(result) = process(url, tree) {
+        if let Some(result) = process(agent, url, tree) {
             return result;
         }
     }
@@ -309,7 +313,7 @@ fn process_html(url: &Url, tree: &Html) -> anyhow::Result<Content> {
     Ok(Content::Text(TextType::Raw(tree.html().into())))
 }
 
-fn process_single_video(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+fn process_single_video(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     let Some(video) = select_single_element(tree, "video") else {
         return None;
     };
@@ -340,7 +344,7 @@ fn process_single_video(url: &Url, tree: &Html) -> Option<anyhow::Result<Content
     })())
 }
 
-fn process_single_pre(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+fn process_single_pre(_: &Agent, _: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     select_single_element(tree, "pre")
         .map(|p| Ok(Content::Text(TextType::Raw(p.inner_html().into()))))
 }
@@ -350,8 +354,8 @@ fn process_single_pre(_: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
 /// # Panics
 ///
 /// It is the caller's responsibility to ensure the `selector` is valid.
-fn image_via_selector(url: &Url, selector: &str) -> anyhow::Result<Content> {
-    let response = ureq::get(url.as_str()).call()?;
+fn image_via_selector(agent: &Agent, url: &Url, selector: &str) -> anyhow::Result<Content> {
+    let response = agent.request_url("GET", url).call()?;
     let tree = Html::parse_document(&response.into_string()?);
     let Some(img) = select_single_element(&tree, selector) else {
         bail!("Expected one image matching selector {selector};");
@@ -361,7 +365,7 @@ fn image_via_selector(url: &Url, selector: &str) -> anyhow::Result<Content> {
             .attr("src")
             .expect("img element must have a src"),
     )?;
-    process_generic(&url)
+    process_generic(agent, &url)
 }
 
 fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {

@@ -3,13 +3,14 @@ use std::collections::HashMap;
 use anyhow::bail;
 use anyhow::Context;
 use serde::Deserialize;
+use ureq::Agent;
 use url::Url;
 
 use crate::Article;
 use crate::Content;
 use crate::TextType;
 
-pub(crate) fn process(url: &Url) -> anyhow::Result<Content> {
+pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     let api_url = url.join("/w/api.php")?;
     let title = percent_encoding::percent_decode_str(
         url.path_segments()
@@ -17,7 +18,8 @@ pub(crate) fn process(url: &Url) -> anyhow::Result<Content> {
             .context("Unexpected wikipedia URL format")?,
     )
     .decode_utf8()?;
-    let response: Response = ureq::get(api_url.as_str())
+    let response: Response = agent
+        .request_url("GET", &api_url)
         .query_pairs([
             ("action", "query"),
             ("format", "json"),

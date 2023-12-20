@@ -2,13 +2,14 @@ use anyhow::bail;
 use base64::Engine;
 use scraper::Html;
 use serde::Deserialize;
+use ureq::Agent;
 use url::Url;
 
 use crate::select_single_element;
 use crate::Content;
 use crate::TextType;
 
-pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     if select_single_element(tree, "meta[name=\"keywords\"]")
         .and_then(|e| e.attr("content"))
         .map(|c| c.split(',').any(|t| t == "gitea"))
@@ -26,17 +27,17 @@ pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
 
         if path_segments.len() >= 6 && path_segments[2] == "src" {
             let path = path_segments[5..].join("/");
-            let content: ContentsResponse = ureq::get(
-                api_base
-                    .join(&format!(
+            let content: ContentsResponse = agent
+                .request_url(
+                    "GET",
+                    &api_base.join(&format!(
                         "repos/{}/{}/contents/{path}",
                         path_segments[0], path_segments[1]
-                    ))?
-                    .as_str(),
-            )
-            .query("ref", path_segments[4])
-            .call()?
-            .into_json()?;
+                    ))?,
+                )
+                .query("ref", path_segments[4])
+                .call()?
+                .into_json()?;
             if content.r#type == "file" {
                 Ok(Content::Text(TextType::Raw(
                     base64::engine::general_purpose::STANDARD.decode(content.content)?,

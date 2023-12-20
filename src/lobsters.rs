@@ -2,6 +2,7 @@ use std::fmt::Write;
 
 use anyhow::bail;
 use serde::Deserialize;
+use ureq::Agent;
 use url::Url;
 
 use crate::Content;
@@ -9,7 +10,7 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
-pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
+pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
     if !url.path().starts_with("/s/") {
         bail!("Unknown lobsters URL");
     }
@@ -18,7 +19,7 @@ pub(crate) fn process(url: &mut Url) -> anyhow::Result<Content> {
         url.set_path(&(url.path().to_owned() + ".json"));
     }
 
-    let story: Story = ureq::get(url.as_str()).call()?.into_json()?;
+    let story: Story = agent.request_url("GET", url).call()?.into_json()?;
     let mut body = story.title.clone();
     if !story.description_plain.is_empty() {
         write!(body, "\n{}", story.description_plain).expect("write! to String cannot fail");

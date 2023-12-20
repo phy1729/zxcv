@@ -1,6 +1,7 @@
 use anyhow::Context;
 use scraper::Html;
 use serde::Deserialize;
+use ureq::Agent;
 use url::Url;
 
 use crate::render_html_text;
@@ -10,7 +11,7 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
-pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     // Akkoma implements the Mastodon API with some differences.
     let is_akkoma = select_single_element(tree, "noscript")
         .map(|e| e.inner_html().contains("Akkoma"))
@@ -33,13 +34,14 @@ pub(crate) fn process(url: &Url, tree: &Html) -> Option<anyhow::Result<Content>>
             .and_then(|mut s| s.nth(1))
             .context("Mastodon URL without post id")?;
         let api_base = url.join("/api/v1/statuses/")?;
-        let status: Status = ureq::get(api_base.join(post_id)?.as_str())
+        let status: Status = agent
+            .request_url("GET", &api_base.join(post_id)?)
             .call()?
             .into_json()?;
-        let context: StatusContext =
-            ureq::get(api_base.join(&format!("{post_id}/context"))?.as_str())
-                .call()?
-                .into_json()?;
+        let context: StatusContext = agent
+            .request_url("GET", &api_base.join(&format!("{post_id}/context"))?)
+            .call()?
+            .into_json()?;
 
         Ok(Content::Text(TextType::PostThread(PostThread {
             before: context.ancestors.into_iter().map(Into::into).collect(),

@@ -1,6 +1,7 @@
 use anyhow::bail;
 use anyhow::Context;
 use serde::Deserialize;
+use ureq::Agent;
 use url::Url;
 
 use crate::render_html_text;
@@ -386,7 +387,7 @@ fn site_tag(hostname: &str) -> Option<&'static str> {
     }
 }
 
-pub(crate) fn process(url: &Url) -> Option<anyhow::Result<Content>> {
+pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
     let Some(site_name) = url.host_str().and_then(site_tag) else {
         return None;
     };
@@ -406,11 +407,12 @@ pub(crate) fn process(url: &Url) -> Option<anyhow::Result<Content>> {
             } else {
                 path_segments[3]
             };
-            let mut answers: Items<Answer> = ureq::get(&format!(
-                "{API_BASE}answers/{id}?site={site_name}&filter={FILTER}"
-            ))
-            .call()?
-            .into_json()?;
+            let mut answers: Items<Answer> = agent
+                .get(&format!(
+                    "{API_BASE}answers/{id}?site={site_name}&filter={FILTER}"
+                ))
+                .call()?
+                .into_json()?;
             let Some(answer) = answers.items.pop() else {
                 bail!("Unexpected answer response: {answers:?}");
             };
@@ -418,11 +420,12 @@ pub(crate) fn process(url: &Url) -> Option<anyhow::Result<Content>> {
             Ok(Content::Text(TextType::Post(answer.into())))
         } else if matches!(path_segments[0], "q" | "questions") {
             let id = path_segments[1];
-            let mut questions: Items<Question> = ureq::get(&format!(
-                "{API_BASE}questions/{id}?site={site_name}&filter={FILTER}"
-            ))
-            .call()?
-            .into_json()?;
+            let mut questions: Items<Question> = agent
+                .get(&format!(
+                    "{API_BASE}questions/{id}?site={site_name}&filter={FILTER}"
+                ))
+                .call()?
+                .into_json()?;
             let Some(question) = questions.items.pop() else {
                 bail!("Unexpected question response: {questions:?}");
             };
