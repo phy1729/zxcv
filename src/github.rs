@@ -1,4 +1,4 @@
-use anyhow::bail;
+use anyhow::Context;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use ureq::Agent;
@@ -13,56 +13,104 @@ use crate::TextType;
 
 const API_BASE: &str = "https://api.github.com";
 
-pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
+enum Path<'a> {
+    Asset(&'a Url),
+    Blob(&'a str, &'a str, &'a str, &'a str),
+    Commit(&'a str, &'a str, &'a str),
+    Issue(&'a str, &'a str, &'a str),
+    Repo(&'a str, &'a str),
+}
+
+fn parse_path(url: &Url) -> Option<Path<'_>> {
     let path_segments: Vec<_> = url
         .path_segments()
         .unwrap_or_else(|| "".split('/'))
         .collect();
 
-    if path_segments.len() == 2 {
-        let readme = request_raw(agent, &format!("{API_BASE}/repos{}/readme", url.path()))?;
-        Ok(Content::Text(TextType::Raw(readme)))
+    Some(if path_segments.len() == 2 {
+        Path::Repo(path_segments[0], path_segments[1])
     } else if path_segments.len() >= 4 && path_segments[2] == "assets" {
-        process_generic(agent, url)
+        Path::Asset(url)
     } else if path_segments.len() >= 5 && path_segments[2] == "blob" {
-        let contents = request_raw(
-            agent,
-            &format!(
-                "{API_BASE}/repos/{}/{}/contents/{}?ref={}",
-                path_segments[0],
-                path_segments[1],
-                path_segments[4..].join("/"),
-                path_segments[3],
-            ),
-        )?;
-        Ok(Content::Text(TextType::Raw(contents)))
+        Path::Blob(
+            path_segments[0],
+            path_segments[1],
+            url.path()
+                .split_at(
+                    url.path()
+                        .match_indices('/')
+                        .nth(4)
+                        .expect("path_segments len checked above")
+                        .0,
+                )
+                .1,
+            path_segments[3],
+        )
     } else if path_segments.len() == 4 && path_segments[2] == "commit" {
-        if !path_segments[3].contains('.') {
-            url.set_path(&(url.path().to_owned() + ".patch"));
-        }
-        process_generic(agent, url)
+        Path::Commit(
+            path_segments[0],
+            path_segments[1],
+            path_segments[3]
+                .split_once('.')
+                .map_or(path_segments[3], |(c, _)| c),
+        )
     } else if path_segments.len() == 4 && path_segments[2] == "issues" {
-        let issue: Issue = request(agent, &format!("{API_BASE}/repos{}", url.path()))?;
-        let comments: Vec<Comment> = request(agent, &issue.comments_url)?;
-
-        Ok(Content::Text(TextType::PostThread(PostThread {
-            before: vec![],
-            main: Post {
-                author: issue.user.login,
-                body: issue.body,
-                urls: vec![],
-            },
-            after: comments
-                .into_iter()
-                .map(|c| Post {
-                    author: c.user.login,
-                    body: c.body,
-                    urls: vec![],
-                })
-                .collect(),
-        })))
+        Path::Issue(path_segments[0], path_segments[1], path_segments[3])
     } else {
-        bail!("Unknown GitHub URL");
+        return None;
+    })
+}
+
+pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
+    let path = parse_path(url).context("Unknown GitHub URL")?;
+
+    match path {
+        Path::Asset(url) => process_generic(agent, url),
+        Path::Blob(owner, repo_name, filepath, r#ref) => {
+            let contents = request_raw(
+                agent,
+                &format!("{API_BASE}/repos/{owner}/{repo_name}/contents{filepath}?ref={ref}"),
+            )?;
+            Ok(Content::Text(TextType::Raw(contents)))
+        }
+        Path::Commit(owner, repo_name, commit_hash) => process_generic(
+            agent,
+            &Url::parse(&format!(
+                "https://github.com/{owner}/{repo_name}/commit/{commit_hash}.patch"
+            ))
+            .expect("URL is valid"),
+        ),
+        Path::Issue(owner, repo_name, issue_id) => {
+            let issue: Issue = request(
+                agent,
+                &format!("{API_BASE}/repos/{owner}/{repo_name}/issues/{issue_id}"),
+            )?;
+            let comments: Vec<Comment> = request(agent, &issue.comments_url)?;
+
+            Ok(Content::Text(TextType::PostThread(PostThread {
+                before: vec![],
+                main: Post {
+                    author: issue.user.login,
+                    body: issue.body,
+                    urls: vec![],
+                },
+                after: comments
+                    .into_iter()
+                    .map(|c| Post {
+                        author: c.user.login,
+                        body: c.body,
+                        urls: vec![],
+                    })
+                    .collect(),
+            })))
+        }
+        Path::Repo(owner, repo_name) => {
+            let readme = request_raw(
+                agent,
+                &format!("{API_BASE}/repos/{owner}/{repo_name}/readme"),
+            )?;
+            Ok(Content::Text(TextType::Raw(readme)))
+        }
     }
 }
 
