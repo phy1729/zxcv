@@ -50,6 +50,7 @@ use scraper::Node;
 use scraper::Selector;
 use tempfile::NamedTempFile;
 use ureq::Agent;
+use url::form_urlencoded::Serializer;
 use url::Url;
 
 mod config;
@@ -271,6 +272,13 @@ fn rewrite_url(url: &mut Url) -> bool {
         }
 
         "marc.info" => {
+            if url.query_pairs().any(|(k, _)| k == "q") {
+                url.set_query(Some(
+                    Serializer::new(&mut String::new())
+                        .extend_pairs(url.query_pairs().into_owned().filter(|(k, _)| k != "q"))
+                        .finish(),
+                ));
+            }
             url.query_pairs_mut().append_pair("q", "mbox");
         }
 
