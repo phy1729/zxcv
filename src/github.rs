@@ -13,6 +13,7 @@ use crate::TextType;
 
 const API_BASE: &str = "https://api.github.com";
 
+#[derive(Debug, PartialEq)]
 enum Path<'a> {
     Asset(&'a Url),
     Blob(&'a str, &'a str, &'a str, &'a str),
@@ -148,6 +149,64 @@ struct Issue {
 #[derive(Debug, Deserialize)]
 struct User {
     login: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use url::Url;
+
+    use super::parse_path;
+    use super::Path;
+
+    macro_rules! parse_path_tests {
+        ($(($name: ident, $path: expr, $expected: expr),)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    test_parse_path($path, $expected);
+                }
+            )*
+        }
+    }
+
+    fn test_parse_path(path: &str, expected: Option<Path<'static>>) {
+        assert!(path.starts_with('/'));
+        let url = Url::parse(&format!("https://github.com{path}")).unwrap();
+        assert_eq!(parse_path(&url), expected);
+    }
+
+    parse_path_tests!(
+        (
+            blob,
+            "/foo/bar/blob/ref/some/path",
+            Some(Path::Blob("foo", "bar", "/some/path", "ref"))
+        ),
+        (
+            commit,
+            "/foo/bar/commit/06c106c106c106c106c106c106c106c106c106c1",
+            Some(Path::Commit(
+                "foo",
+                "bar",
+                "06c106c106c106c106c106c106c106c106c106c1"
+            ))
+        ),
+        (
+            commit_patch,
+            "/foo/bar/commit/06c106c106c106c106c106c106c106c106c106c1.patch",
+            Some(Path::Commit(
+                "foo",
+                "bar",
+                "06c106c106c106c106c106c106c106c106c106c1"
+            ))
+        ),
+        (
+            issue,
+            "/foo/bar/issues/1729",
+            Some(Path::Issue("foo", "bar", "1729"))
+        ),
+        (repo, "/foo/bar", Some(Path::Repo("foo", "bar"))),
+        (unknown, "/invalid", None),
+    );
 }
 
 pub(crate) mod gist {
