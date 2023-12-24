@@ -487,3 +487,80 @@ fn render_html_text(html: &str) -> String {
         .skip_while(|&s| s == "\n\n")
         .collect::<String>()
 }
+
+#[cfg(test)]
+mod tests {
+    use url::Url;
+
+    use super::rewrite_url;
+
+    macro_rules! rewrite_tests {
+        ($(($name: ident, $url: expr, $expected: expr),)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    rewrite_test($url, $expected);
+                }
+            )*
+        }
+    }
+
+    fn rewrite_test(url: &str, expected: Option<&str>) {
+        let mut url = Url::parse(url).unwrap();
+        let mutation_expected = expected.is_some();
+        let expected =
+            expected.map_or_else(|| url.clone(), |u| Url::parse(u).expect("url is valid"));
+
+        assert_eq!(rewrite_url(&mut url), mutation_expected);
+        assert_eq!(url, expected);
+        if mutation_expected {
+            assert_eq!(rewrite_url(&mut url), true);
+            assert_eq!(url, expected);
+        }
+    }
+
+    rewrite_tests!(
+        (
+            bpa_st,
+            "https://bpa.st/example",
+            Some("https://bpa.st/example/raw")
+        ),
+        (
+            bpa_st_pre_raw,
+            "https://bpa.st/raw/example",
+            Some("https://bpa.st/raw/example")
+        ),
+        (
+            dav1d_de,
+            "https://p.dav1d.de/example.rs",
+            Some("https://p.dav1d.de/example")
+        ),
+        (
+            paste_debian_net,
+            "https://paste.debian.net/1729/",
+            Some("https://paste.debian.net/plain/1729")
+        ),
+        (
+            dpaste_com,
+            "https://dpaste.com/example",
+            Some("https://dpaste.com/example.txt")
+        ),
+        (
+            dpaste_org,
+            "https://dpaste.org/example",
+            Some("https://dpaste.org/example/raw")
+        ),
+        (
+            marc_info,
+            "https://marc.info/?l=example&m=1729&w=2",
+            Some("https://marc.info/?l=example&m=1729&w=2&q=mbox")
+        ),
+        (
+            pastebin_com,
+            "https://pastebin.com/example",
+            Some("https://pastebin.com/raw/example")
+        ),
+        (unknown, "https://example.com/example", None),
+        (ip, "https://192.0.2.17/example", None),
+    );
+}
