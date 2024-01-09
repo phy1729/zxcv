@@ -239,7 +239,7 @@ fn site_tag(hostname: &str) -> Option<&'static str> {
         "ebooks.stackexchange.com" => Some("ebooks"),
         "ebooks.meta.stackexchange.com" | "meta.ebooks.stackexchange.com" => Some("ebooks.meta"),
         "alcohol.stackexchange.com" | "beer.stackexchange.com" | "dranks.stackexchange.com" => Some("alcohol"),
-        "alcohol.meta.stackexchange.com" | "meta.beer.stackexchange.com" | "meta.alcohol.stackexchange.com" => Some("alcohol.meta"),
+        "alcohol.meta.stackexchange.com" | "meta.beer.stackexchange.com" | "meta.alcohol.stackexchange.com" | "beer.meta.stackexchange.com" => Some("alcohol.meta"),
         "softwarerecs.stackexchange.com" => Some("softwarerecs"),
         "softwarerecs.meta.stackexchange.com" | "meta.softwarerecs.stackexchange.com" => Some("softwarerecs.meta"),
         "arduino.stackexchange.com" => Some("arduino"),
