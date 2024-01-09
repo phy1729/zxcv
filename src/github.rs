@@ -19,6 +19,7 @@ enum Path<'a> {
     Blob(&'a str, &'a str, &'a str, &'a str),
     Commit(&'a str, &'a str, &'a str),
     Issue(&'a str, &'a str, &'a str),
+    Release(&'a str, &'a str, &'a str),
     Repo(&'a str, &'a str),
 }
 
@@ -57,6 +58,11 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         )
     } else if path_segments.len() == 4 && path_segments[2] == "issues" {
         Path::Issue(path_segments[0], path_segments[1], path_segments[3])
+    } else if path_segments.len() == 5
+        && path_segments[2] == "releases"
+        && path_segments[3] == "tag"
+    {
+        Path::Release(path_segments[0], path_segments[1], path_segments[4])
     } else {
         return None;
     })
@@ -105,6 +111,17 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
                     .collect(),
             })))
         }
+        Path::Release(owner, repo_name, tag) => {
+            let release: Release = request(
+                agent,
+                &format!("{API_BASE}/repos/{owner}/{repo_name}/releases/tags/{tag}"),
+            )?;
+            Ok(Content::Text(TextType::Post(Post {
+                author: release.author.login,
+                body: release.body,
+                urls: vec![release.tarball_url],
+            })))
+        }
         Path::Repo(owner, repo_name) => {
             let readme = request_raw(
                 agent,
@@ -144,6 +161,13 @@ struct Issue {
     body: String,
     comments_url: String,
     user: User,
+}
+
+#[derive(Debug, Deserialize)]
+struct Release {
+    author: User,
+    body: String,
+    tarball_url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -203,6 +227,11 @@ mod tests {
             issue,
             "/foo/bar/issues/1729",
             Some(Path::Issue("foo", "bar", "1729"))
+        ),
+        (
+            release,
+            "/foo/bar/releases/tag/v1.72.9",
+            Some(Path::Release("foo", "bar", "v1.72.9"))
         ),
         (repo, "/foo/bar", Some(Path::Repo("foo", "bar"))),
         (unknown, "/invalid", None),
