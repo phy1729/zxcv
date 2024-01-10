@@ -56,6 +56,7 @@ mod config;
 pub use config::Config;
 
 mod cgit;
+mod discourse;
 mod gitea;
 mod github;
 mod lobsters;
@@ -299,6 +300,7 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
 fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content> {
     for process in [
         cgit::process,
+        discourse::process,
         gitea::process,
         mastodon::process,
         nextcloud::process,
