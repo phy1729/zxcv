@@ -200,6 +200,11 @@ mod tests {
 
     parse_path_tests!(
         (
+            assets,
+            "/foo/bar/assets/1729/06c106c1-06c1-46c1-06c1-06c106c106c1",
+            Some(Path::Raw(_))
+        ),
+        (
             blob,
             "/foo/bar/blob/ref/some/path",
             Some(Path::Blob("foo", "bar", "/some/path", "ref"))
