@@ -6,12 +6,14 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
+use crate::read_raw_response;
 use crate::select_single_element;
 use crate::Content;
 use crate::TextType;
 
 #[derive(Debug, PartialEq)]
 enum Path<'a> {
+    Commit(&'a str, &'a str, &'a str),
     Src(&'a str, &'a str, &'a str, &'a str),
 }
 
@@ -21,24 +23,28 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         .unwrap_or_else(|| "".split('/'))
         .collect();
 
-    Some(if path_segments.len() >= 6 && path_segments[2] == "src" {
-        Path::Src(
-            path_segments[0],
-            path_segments[1],
-            url.path()
-                .split_at(
-                    url.path()
-                        .match_indices('/')
-                        .nth(5)
-                        .expect("path_segments len checked above")
-                        .0,
-                )
-                .1,
-            path_segments[4],
-        )
-    } else {
-        return None;
-    })
+    Some(
+        if path_segments.len() == 4 && path_segments[2] == "commit" {
+            Path::Commit(path_segments[0], path_segments[1], path_segments[3])
+        } else if path_segments.len() >= 6 && path_segments[2] == "src" {
+            Path::Src(
+                path_segments[0],
+                path_segments[1],
+                url.path()
+                    .split_at(
+                        url.path()
+                            .match_indices('/')
+                            .nth(5)
+                            .expect("path_segments len checked above")
+                            .0,
+                    )
+                    .1,
+                path_segments[4],
+            )
+        } else {
+            return None;
+        },
+    )
 }
 
 pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
@@ -55,6 +61,17 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
         let api_base = url.join("/api/v1/").expect("URL is valid");
 
         match path {
+            Path::Commit(owner, repo, sha) => {
+                let response = agent
+                    .request_url(
+                        "GET",
+                        &api_base
+                            .join(&format!("repos/{owner}/{repo}/git/commits/{sha}.patch"))
+                            .expect("URL is valid"),
+                    )
+                    .call()?;
+                Ok(Content::Text(TextType::Raw(read_raw_response(response)?)))
+            }
             Path::Src(owner, repo, filepath, r#ref) => {
                 let content: ContentsResponse = agent
                     .request_url(
@@ -105,6 +122,15 @@ mod tests {
     }
 
     parse_path_tests!(
+        (
+            commit,
+            "/foo/bar/commit/06c106c106c106c106c106c106c106c106c106c1",
+            Some(Path::Commit(
+                "foo",
+                "bar",
+                "06c106c106c106c106c106c106c106c106c106c1"
+            ))
+        ),
         (
             src,
             "/foo/bar/src/branch/ref/some/path",
