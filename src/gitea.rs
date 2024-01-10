@@ -81,3 +81,33 @@ struct ContentsResponse {
     content: String,
     r#type: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use url::Url;
+
+    use super::parse_path;
+    use super::Path;
+
+    macro_rules! parse_path_tests {
+        ($(($name: ident, $path: expr, $expected: pat),)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    assert!($path.starts_with('/'));
+                    let url = Url::parse(&format!("https://example.com{}", $path)).unwrap();
+                    assert!(matches!(parse_path(&url), $expected));
+                }
+            )*
+        }
+    }
+
+    parse_path_tests!(
+        (
+            src,
+            "/foo/bar/src/branch/ref/some/path",
+            Some(Path::Src("foo", "bar", "/some/path", "ref"))
+        ),
+        (unknown, "/invalid", None),
+    );
+}
