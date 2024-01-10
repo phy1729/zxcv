@@ -50,7 +50,7 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
 pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     if select_single_element(tree, "meta[name=\"keywords\"]")
         .and_then(|e| e.attr("content"))
-        .map(|c| c.split(',').any(|t| t == "gitea"))
+        .map(|c| c.split(',').any(|t| t == "forgejo" || t == "gitea"))
         != Some(true)
     {
         return None;
