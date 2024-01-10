@@ -65,6 +65,8 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         } else {
             Path::PullRequest(path_segments[0], path_segments[1], path_segments[3])
         }
+    } else if path_segments.len() >= 5 && path_segments[2] == "raw" {
+        Path::Raw(url)
     } else if path_segments.len() == 5
         && path_segments[2] == "releases"
         && path_segments[3] == "tag"
@@ -274,6 +276,7 @@ mod tests {
             "/foo/bar/pull/1729.patch",
             Some(Path::Raw(_))
         ),
+        (raw, "/foo/bar/raw/ref/some/path", Some(Path::Raw(_))),
         (
             release,
             "/foo/bar/releases/tag/v1.72.9",
