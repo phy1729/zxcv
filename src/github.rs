@@ -18,6 +18,7 @@ enum Path<'a> {
     Blob(&'a str, &'a str, &'a str, &'a str),
     Commit(&'a str, &'a str, &'a str),
     Issue(&'a str, &'a str, &'a str),
+    PullRequest(&'a str, &'a str, &'a str),
     Raw(&'a Url),
     Release(&'a str, &'a str, &'a str),
     Repo(&'a str, &'a str),
@@ -58,6 +59,12 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         )
     } else if path_segments.len() == 4 && path_segments[2] == "issues" {
         Path::Issue(path_segments[0], path_segments[1], path_segments[3])
+    } else if path_segments.len() == 4 && path_segments[2] == "pull" {
+        if path_segments[3].contains('.') {
+            Path::Raw(url)
+        } else {
+            Path::PullRequest(path_segments[0], path_segments[1], path_segments[3])
+        }
     } else if path_segments.len() == 5
         && path_segments[2] == "releases"
         && path_segments[3] == "tag"
@@ -99,6 +106,23 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
                     author: issue.user.login,
                     body: issue.body,
                     urls: vec![],
+                },
+                after: comments.into_iter().map(Into::into).collect(),
+            })))
+        }
+        Path::PullRequest(owner, repo_name, pr_id) => {
+            let pull_request: PullRequest = request(
+                agent,
+                &format!("{API_BASE}/repos/{owner}/{repo_name}/pulls/{pr_id}"),
+            )?;
+            let comments: Vec<Comment> = request(agent, &pull_request.comments_url)?;
+
+            Ok(Content::Text(TextType::PostThread(PostThread {
+                before: vec![],
+                main: Post {
+                    author: pull_request.user.login,
+                    body: pull_request.body.unwrap_or_default(),
+                    urls: vec![pull_request.patch_url],
                 },
                 after: comments.into_iter().map(Into::into).collect(),
             })))
@@ -167,6 +191,14 @@ struct Issue {
 }
 
 #[derive(Debug, Deserialize)]
+struct PullRequest {
+    body: Option<String>,
+    comments_url: String,
+    patch_url: String,
+    user: User,
+}
+
+#[derive(Debug, Deserialize)]
 struct Release {
     author: User,
     body: String,
@@ -231,6 +263,16 @@ mod tests {
             issue,
             "/foo/bar/issues/1729",
             Some(Path::Issue("foo", "bar", "1729"))
+        ),
+        (
+            pull_request,
+            "/foo/bar/pull/1729",
+            Some(Path::PullRequest("foo", "bar", "1729"))
+        ),
+        (
+            pull_request_patch,
+            "/foo/bar/pull/1729.patch",
+            Some(Path::Raw(_))
         ),
         (
             release,
