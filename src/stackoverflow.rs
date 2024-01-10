@@ -473,6 +473,7 @@ struct Items<T> {
 
 #[derive(Debug, Deserialize)]
 struct Answer {
+    #[allow(clippy::struct_field_names)]
     answer_id: u64,
     body: String,
     owner: User,
