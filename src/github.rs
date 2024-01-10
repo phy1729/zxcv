@@ -186,20 +186,16 @@ mod tests {
     use super::Path;
 
     macro_rules! parse_path_tests {
-        ($(($name: ident, $path: expr, $expected: expr),)*) => {
+        ($(($name: ident, $path: expr, $expected: pat),)*) => {
             $(
                 #[test]
                 fn $name() {
-                    test_parse_path($path, $expected);
+                    assert!($path.starts_with('/'));
+                    let url = Url::parse(&format!("https://github.com{}", $path)).unwrap();
+                    assert!(matches!(parse_path(&url), $expected));
                 }
             )*
         }
-    }
-
-    fn test_parse_path(path: &str, expected: Option<Path<'static>>) {
-        assert!(path.starts_with('/'));
-        let url = Url::parse(&format!("https://github.com{path}")).unwrap();
-        assert_eq!(parse_path(&url), expected);
     }
 
     parse_path_tests!(
