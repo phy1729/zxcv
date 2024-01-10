@@ -52,14 +52,16 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
 
     Some((|| {
         let path = parse_path(url).context("Unknown Gitea URL")?;
-        let api_base = url.join("/api/v1/")?;
+        let api_base = url.join("/api/v1/").expect("URL is valid");
 
         match path {
             Path::Src(owner, repo, filepath, r#ref) => {
                 let content: ContentsResponse = agent
                     .request_url(
                         "GET",
-                        &api_base.join(&format!("repos/{owner}/{repo}/contents{filepath}"))?,
+                        &api_base
+                            .join(&format!("repos/{owner}/{repo}/contents{filepath}"))
+                            .expect("URL is valid"),
                     )
                     .query("ref", r#ref)
                     .call()?
