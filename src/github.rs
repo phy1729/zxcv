@@ -100,14 +100,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
                     body: issue.body,
                     urls: vec![],
                 },
-                after: comments
-                    .into_iter()
-                    .map(|c| Post {
-                        author: c.user.login,
-                        body: c.body,
-                        urls: vec![],
-                    })
-                    .collect(),
+                after: comments.into_iter().map(Into::into).collect(),
             })))
         }
         Path::Raw(url) => process_generic(agent, url),
@@ -154,6 +147,16 @@ fn request_raw(agent: &Agent, url: &str) -> anyhow::Result<Vec<u8>> {
 struct Comment {
     body: String,
     user: User,
+}
+
+impl From<Comment> for Post {
+    fn from(comment: Comment) -> Self {
+        Self {
+            author: comment.user.login,
+            body: comment.body,
+            urls: vec![],
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
