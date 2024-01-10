@@ -15,10 +15,10 @@ const API_BASE: &str = "https://api.github.com";
 
 #[derive(Debug, PartialEq)]
 enum Path<'a> {
-    Asset(&'a Url),
     Blob(&'a str, &'a str, &'a str, &'a str),
     Commit(&'a str, &'a str, &'a str),
     Issue(&'a str, &'a str, &'a str),
+    Raw(&'a Url),
     Release(&'a str, &'a str, &'a str),
     Repo(&'a str, &'a str),
 }
@@ -32,7 +32,7 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
     Some(if path_segments.len() == 2 {
         Path::Repo(path_segments[0], path_segments[1])
     } else if path_segments.len() >= 4 && path_segments[2] == "assets" {
-        Path::Asset(url)
+        Path::Raw(url)
     } else if path_segments.len() >= 5 && path_segments[2] == "blob" {
         Path::Blob(
             path_segments[0],
@@ -72,7 +72,6 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
     let path = parse_path(url).context("Unknown GitHub URL")?;
 
     match path {
-        Path::Asset(url) => process_generic(agent, url),
         Path::Blob(owner, repo_name, filepath, r#ref) => {
             let contents = request_raw(
                 agent,
@@ -111,6 +110,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
                     .collect(),
             })))
         }
+        Path::Raw(url) => process_generic(agent, url),
         Path::Release(owner, repo_name, tag) => {
             let release: Release = request(
                 agent,
