@@ -4,6 +4,11 @@ use scraper::Html;
 use scraper::Node;
 use scraper::Selector;
 
+mod state;
+
+use self::state::Block;
+use self::state::State;
+
 /// Return the single element matched by `selector` or `None` if there are zero or more than one
 /// matches.
 ///
@@ -23,29 +28,30 @@ pub(crate) fn select_single_element<'a>(
 }
 
 pub(crate) fn render(html: &str) -> String {
-    let mut result = String::new();
-    render_node_inner(*Html::parse_fragment(html).root_element(), &mut result);
-    result
+    let mut state = State::default();
+    render_node_inner(
+        *Html::parse_fragment(html).root_element(),
+        &mut state.root_block(),
+    );
+    state.render()
 }
 
-fn render_node_inner(node: NodeRef<'_, Node>, result: &mut String) {
+fn render_node_inner(node: NodeRef<'_, Node>, block: &mut Block) {
     match node.value() {
-        Node::Text(t) => result.push_str(t),
+        Node::Text(t) => block.push(t),
 
         Node::Element(e) => match e.name() {
-            "br" => result.push('\n'),
+            "br" => block.push("\n"),
 
             "p" => {
-                if !result.is_empty() {
-                    result.push_str("\n\n");
-                }
+                block.push("\n\n");
                 node.children()
-                    .for_each(|node| render_node_inner(node, result));
+                    .for_each(|node| render_node_inner(node, block));
             }
 
             _ => {
                 node.children()
-                    .for_each(|node| render_node_inner(node, result));
+                    .for_each(|node| render_node_inner(node, block));
             }
         },
 
