@@ -45,6 +45,13 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
         Node::Text(t) => block.push(t),
 
         Node::Element(e) => match e.name() {
+            "b" | "strong" => {
+                block.push_raw("**");
+                node.children()
+                    .for_each(|node| render_node_inner(node, url, block));
+                block.push_raw("**");
+            }
+
             "br" => block.newline(),
 
             "div" | "p" => {
@@ -106,6 +113,7 @@ mod tests {
         (whitespace_span_trailing, "<span>foo </span> bar", "foo bar"),
         (whitespace_span_middle, "<span>foo</span> <span>bar</span>", "foo bar"),
         (whitespace_zwsp, "foo <p>\u{200b}</p> bar", "foo\n\nbar"),
+        (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
         (br, "foo<br>bar", "foo\nbar"),
         (br_space, "foo<br> bar", "foo\nbar"),
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
