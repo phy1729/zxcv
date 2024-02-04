@@ -60,6 +60,13 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                     .for_each(|node| render_node_inner(node, url, &mut block));
             }
 
+            "em" | "i" => {
+                block.push_raw("_");
+                node.children()
+                    .for_each(|node| render_node_inner(node, url, block));
+                block.push_raw("_");
+            }
+
             "img" => {
                 if let Some(src) = e.attr("src") {
                     block.push_raw("![");
@@ -119,6 +126,7 @@ mod tests {
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
         (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
         (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
+        (em, "foo <em>bar</em> baz", "foo _bar_ baz"),
         (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
     );
