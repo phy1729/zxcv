@@ -41,12 +41,12 @@ fn render_node_inner(node: NodeRef<'_, Node>, block: &mut Block) {
         Node::Text(t) => block.push(t),
 
         Node::Element(e) => match e.name() {
-            "br" => block.push("\n"),
+            "br" => block.newline(),
 
             "p" => {
-                block.push("\n\n");
+                let mut block = block.new_block();
                 node.children()
-                    .for_each(|node| render_node_inner(node, block));
+                    .for_each(|node| render_node_inner(node, &mut block));
             }
 
             _ => {
