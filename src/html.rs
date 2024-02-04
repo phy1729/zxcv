@@ -43,7 +43,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, block: &mut Block) {
         Node::Element(e) => match e.name() {
             "br" => block.newline(),
 
-            "p" => {
+            "div" | "p" => {
                 let mut block = block.new_block();
                 node.children()
                     .for_each(|node| render_node_inner(node, &mut block));
@@ -77,6 +77,7 @@ mod tests {
     render_tests!(
         (plain, "foo bar", "foo bar"),
         (br, "foo<br>bar", "foo\nbar"),
+        (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
         (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
     );
 }
