@@ -22,5 +22,6 @@ serde = { version = "1.0.145", features = ["derive"] }
 tempfile = "3"
 textwrap = "0.16"
 toml = { version = "0.8", default-features = false, features = ["parse"] }
+unicode-width = "0.1.10"
 ureq = { version = "2.6.0", features = ["json"] }
 url = "2"

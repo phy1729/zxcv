@@ -1039,6 +1039,7 @@ dependencies = [
  "tempfile",
  "textwrap",
  "toml",
+ "unicode-width",
  "ureq",
  "url",
 ]

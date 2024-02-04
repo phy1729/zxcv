@@ -3,6 +3,7 @@ use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
 use scraper::Selector;
+use unicode_width::UnicodeWidthStr;
 use url::Url;
 
 mod escape_markdown;
@@ -67,6 +68,42 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 block.push_raw("_");
             }
 
+            "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
+                let mut sub_state = State::default();
+                node.children()
+                    .fold(&mut sub_state.root_block(), |block, node| {
+                        render_node_inner(node, url, block);
+                        block
+                    });
+                let header = sub_state.render();
+
+                if !header.is_empty() {
+                    let mut block = block.new_block();
+                    match e.name() {
+                        "h1" | "h2" => {
+                            // Already escaped
+                            block.push_raw(&header);
+                            block.newline();
+                            block.push_raw(
+                                &(if e.name() == "h1" { "=" } else { "-" }).repeat(header.width()),
+                            );
+                        }
+                        "h3" | "h4" | "h5" | "h6" => {
+                            block.push_raw(match e.name() {
+                                "h3" => "### ",
+                                "h4" => "#### ",
+                                "h5" => "##### ",
+                                "h6" => "###### ",
+                                _ => unreachable!(),
+                            });
+                            // Already escaped
+                            block.push_raw(&header);
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+
             "img" => {
                 if let Some(src) = e.attr("src") {
                     block.push_raw("![");
@@ -127,6 +164,11 @@ mod tests {
         (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
         (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
         (em, "foo <em>bar</em> baz", "foo _bar_ baz"),
+        (header_h1, "<h1>header</h1>", "header\n======"),
+        (header_ignore_empty, "<h1></h1>", ""),
+        (header_escapes, "<h1>foo `bar` baz</h1>", "foo \\`bar\\` baz\n==============="),
+        (header_h2, "<h2>header</h2>", "header\n------"),
+        (header_h3, "<h3>header</h2>", "### header"),
         (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
     );

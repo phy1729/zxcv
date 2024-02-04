@@ -49,7 +49,7 @@ impl<'s> Block<'s> {
             }
 
             if raw {
-                self.state.pending.push_str(s);
+                self.state.pending.push_str(s.trim());
             } else {
                 self.state
                     .pending
