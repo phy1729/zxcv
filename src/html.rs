@@ -1,3 +1,4 @@
+use ego_tree::NodeRef;
 use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
@@ -22,17 +23,34 @@ pub(crate) fn select_single_element<'a>(
 }
 
 pub(crate) fn render(html: &str) -> String {
-    Html::parse_fragment(html)
-        .root_element()
-        .descendants()
-        .filter_map(|e| match e.value() {
-            Node::Text(t) => Some(&**t),
-            Node::Element(e) if e.name() == "br" => Some("\n"),
-            Node::Element(e) if e.name() == "p" => Some("\n\n"),
-            _ => None,
-        })
-        .skip_while(|&s| s == "\n\n")
-        .collect::<String>()
+    let mut result = String::new();
+    render_node_inner(*Html::parse_fragment(html).root_element(), &mut result);
+    result
+}
+
+fn render_node_inner(node: NodeRef<'_, Node>, result: &mut String) {
+    match node.value() {
+        Node::Text(t) => result.push_str(t),
+
+        Node::Element(e) => match e.name() {
+            "br" => result.push('\n'),
+
+            "p" => {
+                if !result.is_empty() {
+                    result.push_str("\n\n");
+                }
+                node.children()
+                    .for_each(|node| render_node_inner(node, result));
+            }
+
+            _ => {
+                node.children()
+                    .for_each(|node| render_node_inner(node, result));
+            }
+        },
+
+        _ => {}
+    }
 }
 
 #[cfg(test)]
