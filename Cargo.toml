@@ -14,7 +14,7 @@ anyhow = "1.0.14"
 base64 = "0.21"
 ego-tree = "0.6.2"
 getopt = "1"
-percent-encoding = "2"
+percent-encoding = "2.1"
 pledge = "0.4"
 scraper = { version = "0.18.1", default-features = false }
 # Increased for toml
@@ -24,4 +24,4 @@ textwrap = "0.16"
 toml = { version = "0.8", default-features = false, features = ["parse"] }
 unicode-width = "0.1.10"
 ureq = { version = "2.6.0", features = ["json"] }
-url = "2"
+url = "2.2.2"

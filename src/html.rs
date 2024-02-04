@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use ego_tree::NodeRef;
 use scraper::ElementRef;
 use scraper::Html;
@@ -41,11 +43,50 @@ pub(crate) fn render(html: &str, url: &Url) -> String {
     state.render()
 }
 
+#[allow(clippy::too_many_lines)]
 fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
     match node.value() {
         Node::Text(t) => block.push(t),
 
         Node::Element(e) => match e.name() {
+            "a" => {
+                if let Some(link) = e.attr("href") {
+                    let mut sub_state = State::default();
+                    node.children()
+                        .fold(&mut sub_state.root_block(), |block, node| {
+                            render_node_inner(node, url, block);
+                            block
+                        });
+                    let text = sub_state.render();
+
+                    let destination: Option<Cow<str>> = match url.join(link) {
+                        Ok(abs_link) => {
+                            let is_anchor = url
+                                .make_relative(&abs_link)
+                                .map(|u| u.is_empty() || u.starts_with('#'))
+                                == Some(true);
+                            if !is_anchor
+                                || text.chars().count() > if text.starts_with('\\') { 2 } else { 1 }
+                            {
+                                Some(Into::<String>::into(abs_link).into())
+                            } else {
+                                None
+                            }
+                        }
+                        Err(_) => Some(link.into()),
+                    };
+
+                    if let Some(destination) = destination {
+                        block.push_raw("[");
+                        // Already escaped
+                        block.push_raw(&text);
+                        block.push_raw("](");
+                        block.push_raw(&destination);
+                        block.push_raw(")");
+                    }
+                }
+            }
+
             "b" | "strong" => {
                 block.push_raw("**");
                 node.children()
@@ -159,6 +200,11 @@ mod tests {
         (whitespace_span_trailing, "<span>foo </span> bar", "foo bar"),
         (whitespace_span_middle, "<span>foo</span> <span>bar</span>", "foo bar"),
         (whitespace_zwsp, "foo <p>\u{200b}</p> bar", "foo\n\nbar"),
+        (whitespace_link, "<span>foo </span><a href=\"/2\">bar</a>", "foo [bar](https://example.com/2)"),
+        (link, "<a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
+        (link_url_is_raw, "<a href=\"/foo_bar\">baz</a>", "[baz](https://example.com/foo_bar)"),
+        (link_anchor, "<a href=\"#somewhere\">text</a>", "[text](https://example.com/#somewhere)"),
+        (link_anchor_useless, "<h3>header <a href=\"#somewhere\">#</a></h3>", "### header"),
         (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
         (br, "foo<br>bar", "foo\nbar"),
         (br_space, "foo<br> bar", "foo\nbar"),
