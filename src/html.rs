@@ -119,6 +119,8 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 }
             }
 
+            "script" | "style" | "template" | "title" => {}
+
             _ => {
                 node.children()
                     .for_each(|node| render_node_inner(node, url, block));
@@ -171,5 +173,6 @@ mod tests {
         (header_h3, "<h3>header</h2>", "### header"),
         (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
+        (script, "foo <script>bar</script>baz", "foo baz"),
     );
 }
