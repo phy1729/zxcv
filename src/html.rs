@@ -4,6 +4,7 @@ use scraper::Html;
 use scraper::Node;
 use scraper::Selector;
 
+mod squeeze_whitespace;
 mod state;
 
 use self::state::Block;
@@ -76,7 +77,16 @@ mod tests {
 
     render_tests!(
         (plain, "foo bar", "foo bar"),
+        (whitespace_compress_spaces, "foo      bar", "foo bar"),
+        (whitespace_compress_newlines, "foo\n\n  bar", "foo bar"),
+        (whitespace_compress_tabs, "foo\t\t \tbar", "foo bar"),
+        (whitespace_leading, "  foo bar", "foo bar"),
+        (whitespace_trailing, "foo bar  ", "foo bar"),
+        (whitespace_span_trailing, "<span>foo </span> bar", "foo bar"),
+        (whitespace_span_middle, "<span>foo</span> <span>bar</span>", "foo bar"),
         (br, "foo<br>bar", "foo\nbar"),
+        (br_space, "foo<br> bar", "foo\nbar"),
+        (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
         (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
         (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
     );
