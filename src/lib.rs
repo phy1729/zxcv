@@ -64,6 +64,8 @@ mod nextcloud;
 mod stackoverflow;
 mod wikimedia;
 
+const LINE_LENGTH: usize = 80;
+
 enum Content {
     Image(Box<dyn Read>),
     Pdf(Box<dyn Read>),
@@ -94,7 +96,7 @@ impl Display for Post {
         write!(
             f,
             "{}",
-            textwrap::fill(&format!("<{}> {}", self.author, self.body), 80)
+            textwrap::fill(&format!("<{}> {}", self.author, self.body), LINE_LENGTH)
         )?;
         if !self.urls.is_empty() {
             writeln!(f)?;
@@ -118,7 +120,7 @@ impl TextType {
                     writer,
                     "{}\n\n{}",
                     article.title,
-                    textwrap::fill(&article.body, 80)
+                    textwrap::fill(&article.body, LINE_LENGTH)
                 )
             }
             Self::Post(post) => write!(writer, "{post}"),
