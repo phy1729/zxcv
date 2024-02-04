@@ -1,3 +1,7 @@
+pub(super) fn is_whitespace(c: char) -> bool {
+    c.is_whitespace() || c == '\u{200b}'
+}
+
 pub(super) struct SqueezeWhitespace<T>
 where
     T: Iterator<Item = char>,
@@ -11,7 +15,7 @@ where
     T: Iterator<Item = char>,
 {
     pub fn new(mut chars: T) -> Self {
-        let next = chars.find(|c| !c.is_whitespace());
+        let next = chars.find(|c| !is_whitespace(*c));
         Self { chars, next }
     }
 }
@@ -28,8 +32,8 @@ where
             return Some(next);
         }
         if let Some(next) = self.chars.next() {
-            if next.is_whitespace() {
-                self.next = self.chars.find(|c| !c.is_whitespace());
+            if is_whitespace(next) {
+                self.next = self.chars.find(|c| !is_whitespace(*c));
                 if self.next.is_some() {
                     Some(' ')
                 } else {
@@ -66,5 +70,10 @@ mod tests {
         (middle, "foo  bar  baz", "foo bar baz"),
         (newline, "foo\nbar\n  baz \nquux", "foo bar baz quux"),
         (tab, "foo\tbar\t  baz \tquux", "foo bar baz quux"),
+        (
+            zwsp,
+            "foo\u{200b}bar\u{200b}  baz \u{200b}quux",
+            "foo bar baz quux"
+        ),
     );
 }

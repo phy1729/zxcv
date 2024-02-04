@@ -1,3 +1,4 @@
+use super::squeeze_whitespace::is_whitespace;
 use super::squeeze_whitespace::SqueezeWhitespace;
 
 #[derive(Debug, Default)]
@@ -28,10 +29,10 @@ pub(super) struct Block<'s> {
 
 impl<'s> Block<'s> {
     pub fn push(&mut self, s: &str) {
-        if s.chars().all(char::is_whitespace) {
+        if s.chars().all(is_whitespace) {
             self.trailing_whitespace |= !s.is_empty();
         } else {
-            let initial_whitespace = s.chars().next().map(char::is_whitespace) == Some(true);
+            let initial_whitespace = s.chars().next().map(is_whitespace) == Some(true);
             if (self.trailing_whitespace || initial_whitespace)
                 && !(self.state.pending.is_empty() || self.state.pending.ends_with('\n'))
             {
@@ -40,7 +41,7 @@ impl<'s> Block<'s> {
 
             self.state.pending.extend(SqueezeWhitespace::new(s.chars()));
 
-            self.trailing_whitespace = s.chars().last().map(char::is_whitespace) == Some(true);
+            self.trailing_whitespace = s.chars().last().map(is_whitespace) == Some(true);
         }
     }
 

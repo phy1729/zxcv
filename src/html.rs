@@ -84,6 +84,7 @@ mod tests {
         (whitespace_trailing, "foo bar  ", "foo bar"),
         (whitespace_span_trailing, "<span>foo </span> bar", "foo bar"),
         (whitespace_span_middle, "<span>foo</span> <span>bar</span>", "foo bar"),
+        (whitespace_zwsp, "foo <p>\u{200b}</p> bar", "foo\n\nbar"),
         (br, "foo<br>bar", "foo\nbar"),
         (br_space, "foo<br> bar", "foo\nbar"),
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
