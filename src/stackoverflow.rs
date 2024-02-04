@@ -417,7 +417,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
                 bail!("Unexpected answer response: {answers:?}");
             };
 
-            Ok(Content::Text(TextType::Post(answer.into())))
+            Ok(Content::Text(TextType::Post(answer.render(url))))
         } else if matches!(path_segments[0], "q" | "questions") {
             let id = path_segments[1];
             let mut questions: Items<Question> = agent
@@ -432,7 +432,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
 
             let question_post = Post {
                 author: question.owner.display_name,
-                body: html::render(&question.body),
+                body: html::render(&question.body, url),
                 urls: vec![],
             };
 
@@ -444,7 +444,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
                         .context("question {id} missing requested answer id {answer_id}")?;
                     PostThread {
                         before: vec![question_post],
-                        main: answer.into(),
+                        main: answer.render(url),
                         after: vec![],
                     }
                 } else {
@@ -455,7 +455,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
                             .answers
                             .unwrap_or_else(Vec::new)
                             .into_iter()
-                            .map(Into::into)
+                            .map(|a| a.render(url))
                             .collect(),
                     }
                 },
@@ -491,11 +491,11 @@ struct User {
     display_name: String,
 }
 
-impl From<Answer> for Post {
-    fn from(answer: Answer) -> Self {
-        Self {
-            author: html::render(&answer.owner.display_name),
-            body: html::render(&answer.body),
+impl Answer {
+    fn render(self, url: &Url) -> Post {
+        Post {
+            author: html::render(&self.owner.display_name, url),
+            body: html::render(&self.body, url),
             urls: vec![],
         }
     }

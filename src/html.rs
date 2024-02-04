@@ -3,6 +3,7 @@ use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
 use scraper::Selector;
+use url::Url;
 
 mod escape_markdown;
 mod squeeze_whitespace;
@@ -29,16 +30,18 @@ pub(crate) fn select_single_element<'a>(
     }
 }
 
-pub(crate) fn render(html: &str) -> String {
+pub(crate) fn render(html: &str, url: &Url) -> String {
     let mut state = State::default();
     render_node_inner(
         *Html::parse_fragment(html).root_element(),
+        url,
         &mut state.root_block(),
     );
     state.render()
 }
 
-fn render_node_inner(node: NodeRef<'_, Node>, block: &mut Block) {
+#[allow(clippy::only_used_in_recursion)]
+fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
     match node.value() {
         Node::Text(t) => block.push(t),
 
@@ -48,12 +51,12 @@ fn render_node_inner(node: NodeRef<'_, Node>, block: &mut Block) {
             "div" | "p" => {
                 let mut block = block.new_block();
                 node.children()
-                    .for_each(|node| render_node_inner(node, &mut block));
+                    .for_each(|node| render_node_inner(node, url, &mut block));
             }
 
             _ => {
                 node.children()
-                    .for_each(|node| render_node_inner(node, block));
+                    .for_each(|node| render_node_inner(node, url, block));
             }
         },
 
@@ -63,6 +66,8 @@ fn render_node_inner(node: NodeRef<'_, Node>, block: &mut Block) {
 
 #[cfg(test)]
 mod tests {
+    use url::Url;
+
     use super::render;
 
     macro_rules! render_tests {
@@ -70,7 +75,7 @@ mod tests {
             $(
                 #[test]
                 fn $name() {
-                    assert_eq!(render($html), $expected);
+                    assert_eq!(render($html, &Url::parse("https://example.com/").unwrap()), $expected);
                 }
             )*
         }

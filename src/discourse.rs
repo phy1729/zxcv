@@ -37,12 +37,12 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
 
             Ok(Content::Text(TextType::PostThread(PostThread {
                 before: vec![],
-                main: topic.post_stream.posts.remove(0).into(),
+                main: topic.post_stream.posts.remove(0).render(url),
                 after: topic
                     .post_stream
                     .posts
                     .into_iter()
-                    .map(Into::into)
+                    .map(|p| p.render(url))
                     .collect(),
             })))
         } else {
@@ -57,11 +57,11 @@ struct DiscoursePost {
     username: String,
 }
 
-impl From<DiscoursePost> for Post {
-    fn from(post: DiscoursePost) -> Self {
-        Self {
-            author: post.username,
-            body: html::render(&post.cooked),
+impl DiscoursePost {
+    fn render(self, url: &Url) -> Post {
+        Post {
+            author: self.username,
+            body: html::render(&self.cooked, url),
             urls: vec![],
         }
     }

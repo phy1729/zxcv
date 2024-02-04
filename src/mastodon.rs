@@ -43,9 +43,17 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
             .into_json()?;
 
         Ok(Content::Text(TextType::PostThread(PostThread {
-            before: context.ancestors.into_iter().map(Into::into).collect(),
-            main: status.into(),
-            after: context.descendants.into_iter().map(Into::into).collect(),
+            before: context
+                .ancestors
+                .into_iter()
+                .map(|s| s.render(url))
+                .collect(),
+            main: status.render(url),
+            after: context
+                .descendants
+                .into_iter()
+                .map(|s| s.render(url))
+                .collect(),
         })))
     })())
 }
@@ -57,16 +65,12 @@ struct Status {
     media_attachments: Vec<MediaAttachment>,
 }
 
-impl From<Status> for Post {
-    fn from(status: Status) -> Self {
-        Self {
-            author: status.account.display_name,
-            body: html::render(&status.content),
-            urls: status
-                .media_attachments
-                .into_iter()
-                .map(|a| a.url)
-                .collect(),
+impl Status {
+    fn render(self, url: &Url) -> Post {
+        Post {
+            author: self.account.display_name,
+            body: html::render(&self.content, url),
+            urls: self.media_attachments.into_iter().map(|a| a.url).collect(),
         }
     }
 }
