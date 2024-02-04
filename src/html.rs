@@ -34,3 +34,25 @@ pub(crate) fn render(html: &str) -> String {
         .skip_while(|&s| s == "\n\n")
         .collect::<String>()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::render;
+
+    macro_rules! render_tests {
+        ($(($name: ident, $html: expr, $expected: expr),)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    assert_eq!(render($html), $expected);
+                }
+            )*
+        }
+    }
+
+    render_tests!(
+        (plain, "foo bar", "foo bar"),
+        (br, "foo<br>bar", "foo\nbar"),
+        (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
+    );
+}
