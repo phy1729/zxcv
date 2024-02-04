@@ -4,15 +4,14 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
-use crate::render_html_text;
-use crate::select_single_element;
+use crate::html;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
 pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    if select_single_element(tree, "meta[name=\"generator\"]")
+    if html::select_single_element(tree, "meta[name=\"generator\"]")
         .and_then(|e| e.attr("content"))
         .map(|c| c.starts_with("Discourse "))
         != Some(true)
@@ -62,7 +61,7 @@ impl From<DiscoursePost> for Post {
     fn from(post: DiscoursePost) -> Self {
         Self {
             author: post.username,
-            body: render_html_text(&post.cooked),
+            body: html::render(&post.cooked),
             urls: vec![],
         }
     }

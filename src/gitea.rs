@@ -6,8 +6,8 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
+use crate::html;
 use crate::read_raw_response;
-use crate::select_single_element;
 use crate::Content;
 use crate::TextType;
 
@@ -48,7 +48,7 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
 }
 
 pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    if select_single_element(tree, "meta[name=\"keywords\"]")
+    if html::select_single_element(tree, "meta[name=\"keywords\"]")
         .and_then(|e| e.attr("content"))
         .map(|c| c.split(',').any(|t| t == "forgejo" || t == "gitea"))
         != Some(true)

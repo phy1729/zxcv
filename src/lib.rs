@@ -44,10 +44,8 @@ use std::process::Command;
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
-use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
-use scraper::Selector;
 use tempfile::NamedTempFile;
 use ureq::Agent;
 use url::Url;
@@ -59,6 +57,7 @@ mod cgit;
 mod discourse;
 mod gitea;
 mod github;
+mod html;
 mod lobsters;
 mod mastodon;
 mod nextcloud;
@@ -323,7 +322,7 @@ fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content
 }
 
 fn process_single_video(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    let Some(video) = select_single_element(tree, "video") else {
+    let Some(video) = html::select_single_element(tree, "video") else {
         return None;
     };
 
@@ -354,7 +353,7 @@ fn process_single_video(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Res
 }
 
 fn process_single_pre(_: &Agent, _: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    select_single_element(tree, "pre")
+    html::select_single_element(tree, "pre")
         .map(|p| Ok(Content::Text(TextType::Raw(p.inner_html().into()))))
 }
 
@@ -366,7 +365,7 @@ fn process_single_pre(_: &Agent, _: &Url, tree: &Html) -> Option<anyhow::Result<
 fn image_via_selector(agent: &Agent, url: &Url, selector: &str) -> anyhow::Result<Content> {
     let response = agent.request_url("GET", url).call()?;
     let tree = Html::parse_document(&response.into_string()?);
-    let Some(img) = select_single_element(&tree, selector) else {
+    let Some(img) = html::select_single_element(&tree, selector) else {
         bail!("Expected one image matching selector {selector};");
     };
     let url = url.join(
@@ -440,21 +439,6 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
     }
 }
 
-/// Return the single element matched by `selector` or `None` if there are zero or more than one
-/// matches.
-///
-/// # Panics
-///
-/// It is the caller's responsibility to ensure the `selector` is valid.
-fn select_single_element<'a>(tree: &'a Html, selector_string: &str) -> Option<ElementRef<'a>> {
-    let selector = Selector::parse(selector_string).expect("Caller must supply a valid selector");
-    let mut iter = tree.select(&selector).fuse();
-    match (iter.next(), iter.next()) {
-        (Some(element), None) => Some(element),
-        _ => None,
-    }
-}
-
 fn read_raw_response(response: ureq::Response) -> io::Result<Vec<u8>> {
     const MAX_RAW_LEN: u32 = 1024 * 1024;
     let capacity = response
@@ -467,18 +451,4 @@ fn read_raw_response(response: ureq::Response) -> io::Result<Vec<u8>> {
         .take(u64::from(MAX_RAW_LEN))
         .read_to_end(&mut body)?;
     Ok(body)
-}
-
-fn render_html_text(html: &str) -> String {
-    Html::parse_fragment(html)
-        .root_element()
-        .descendants()
-        .filter_map(|e| match e.value() {
-            Node::Text(t) => Some(&**t),
-            Node::Element(e) if e.name() == "br" => Some("\n"),
-            Node::Element(e) if e.name() == "p" => Some("\n\n"),
-            _ => None,
-        })
-        .skip_while(|&s| s == "\n\n")
-        .collect::<String>()
 }

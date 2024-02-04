@@ -4,8 +4,7 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
-use crate::render_html_text;
-use crate::select_single_element;
+use crate::html;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
@@ -13,14 +12,14 @@ use crate::TextType;
 
 pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
     // Akkoma implements the Mastodon API with some differences.
-    let is_akkoma = select_single_element(tree, "noscript")
+    let is_akkoma = html::select_single_element(tree, "noscript")
         .map(|e| e.inner_html().contains("Akkoma"))
         == Some(true);
 
-    let is_mastodon = select_single_element(tree, "div#mastodon").is_some();
+    let is_mastodon = html::select_single_element(tree, "div#mastodon").is_some();
 
     // Sharkey implements the Mastodon API.
-    let is_sharkey = select_single_element(tree, "meta[name=\"application-name\"]")
+    let is_sharkey = html::select_single_element(tree, "meta[name=\"application-name\"]")
         .and_then(|e| e.attr("content"))
         == Some("Sharkey");
 
@@ -62,7 +61,7 @@ impl From<Status> for Post {
     fn from(status: Status) -> Self {
         Self {
             author: status.account.display_name,
-            body: render_html_text(&status.content),
+            body: html::render(&status.content),
             urls: status
                 .media_attachments
                 .into_iter()

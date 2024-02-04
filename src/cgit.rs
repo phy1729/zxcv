@@ -4,12 +4,12 @@ use scraper::Html;
 use ureq::Agent;
 use url::Url;
 
+use crate::html;
 use crate::process_generic;
-use crate::select_single_element;
 use crate::Content;
 
 pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    if select_single_element(tree, "meta[name=\"generator\"]")
+    if html::select_single_element(tree, "meta[name=\"generator\"]")
         .and_then(|e| e.attr("content"))
         .map(|c| c.starts_with("cgit "))
         != Some(true)
@@ -18,7 +18,7 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
     }
 
     Some((|| {
-        let repo_path = select_single_element(tree, "table.tabs a:first-child")
+        let repo_path = html::select_single_element(tree, "table.tabs a:first-child")
             .context("cgit page missing summary link")?
             .attr("href")
             .expect("a element has href attribute");

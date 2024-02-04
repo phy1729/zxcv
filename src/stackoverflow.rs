@@ -4,7 +4,7 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
-use crate::render_html_text;
+use crate::html;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
@@ -432,7 +432,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
 
             let question_post = Post {
                 author: question.owner.display_name,
-                body: render_html_text(&question.body),
+                body: html::render(&question.body),
                 urls: vec![],
             };
 
@@ -494,8 +494,8 @@ struct User {
 impl From<Answer> for Post {
     fn from(answer: Answer) -> Self {
         Self {
-            author: render_html_text(&answer.owner.display_name),
-            body: render_html_text(&answer.body),
+            author: html::render(&answer.owner.display_name),
+            body: html::render(&answer.body),
             urls: vec![],
         }
     }
