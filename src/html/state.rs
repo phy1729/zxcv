@@ -13,6 +13,7 @@ impl State {
         Block {
             state: self,
             trailing_whitespace: false,
+            in_code: false,
         }
     }
 
@@ -26,9 +27,18 @@ impl State {
 pub(super) struct Block<'s> {
     state: &'s mut State,
     trailing_whitespace: bool,
+    in_code: bool,
 }
 
 impl<'s> Block<'s> {
+    pub fn start_code(&mut self) {
+        self.in_code = true;
+    }
+
+    pub fn end_code(&mut self) {
+        self.in_code = false;
+    }
+
     pub fn push(&mut self, s: &str) {
         self.push_inner(s, false);
     }
@@ -50,6 +60,8 @@ impl<'s> Block<'s> {
 
             if raw {
                 self.state.pending.push_str(s.trim());
+            } else if self.in_code {
+                self.state.pending.extend(SqueezeWhitespace::new(s.chars()));
             } else {
                 self.state
                     .pending
@@ -85,6 +97,7 @@ impl<'s> Block<'s> {
         Block {
             state: self.state,
             trailing_whitespace: false,
+            in_code: false,
         }
     }
 }

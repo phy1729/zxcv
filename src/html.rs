@@ -96,6 +96,15 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
 
             "br" => block.newline(),
 
+            "code" => {
+                block.push_raw("`");
+                block.start_code();
+                node.children()
+                    .for_each(|node| render_node_inner(node, url, block));
+                block.end_code();
+                block.push_raw("`");
+            }
+
             "div" | "p" => {
                 let mut block = block.new_block();
                 node.children()
@@ -203,12 +212,16 @@ mod tests {
         (whitespace_link, "<span>foo </span><a href=\"/2\">bar</a>", "foo [bar](https://example.com/2)"),
         (link, "<a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
         (link_url_is_raw, "<a href=\"/foo_bar\">baz</a>", "[baz](https://example.com/foo_bar)"),
+        (link_code, "<a href=\"/foo\"><code>bar</code></a>", "[`bar`](https://example.com/foo)"),
+        (link_not_code, "<a href=\"/foo\">`bar`</a>", "[\\`bar\\`](https://example.com/foo)"),
         (link_anchor, "<a href=\"#somewhere\">text</a>", "[text](https://example.com/#somewhere)"),
         (link_anchor_useless, "<h3>header <a href=\"#somewhere\">#</a></h3>", "### header"),
         (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
         (br, "foo<br>bar", "foo\nbar"),
         (br_space, "foo<br> bar", "foo\nbar"),
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
+        (code, "foo <code>bar</code> baz", "foo `bar` baz"),
+        (code_literals, "<code>*_foo</code>bar*", "`*_foo`bar\\*"),
         (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
         (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
         (em, "foo <em>bar</em> baz", "foo _bar_ baz"),
