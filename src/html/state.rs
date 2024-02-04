@@ -1,3 +1,4 @@
+use super::escape_markdown::EscapeMarkdown;
 use super::squeeze_whitespace::is_whitespace;
 use super::squeeze_whitespace::SqueezeWhitespace;
 
@@ -39,7 +40,9 @@ impl<'s> Block<'s> {
                 self.state.pending.push(' ');
             }
 
-            self.state.pending.extend(SqueezeWhitespace::new(s.chars()));
+            self.state
+                .pending
+                .extend(EscapeMarkdown::new(SqueezeWhitespace::new(s.chars())));
 
             self.trailing_whitespace = s.chars().last().map(is_whitespace) == Some(true);
         }

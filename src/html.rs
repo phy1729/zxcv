@@ -4,6 +4,7 @@ use scraper::Html;
 use scraper::Node;
 use scraper::Selector;
 
+mod escape_markdown;
 mod squeeze_whitespace;
 mod state;
 
@@ -77,6 +78,7 @@ mod tests {
 
     render_tests!(
         (plain, "foo bar", "foo bar"),
+        (escaped, "foo* bar_baz", "foo\\* bar\\_baz"),
         (whitespace_compress_spaces, "foo      bar", "foo bar"),
         (whitespace_compress_newlines, "foo\n\n  bar", "foo bar"),
         (whitespace_compress_tabs, "foo\t\t \tbar", "foo bar"),
