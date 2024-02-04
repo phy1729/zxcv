@@ -30,6 +30,14 @@ pub(super) struct Block<'s> {
 
 impl<'s> Block<'s> {
     pub fn push(&mut self, s: &str) {
+        self.push_inner(s, false);
+    }
+
+    pub fn push_raw(&mut self, s: &str) {
+        self.push_inner(s, true);
+    }
+
+    fn push_inner(&mut self, s: &str, raw: bool) {
         if s.chars().all(is_whitespace) {
             self.trailing_whitespace |= !s.is_empty();
         } else {
@@ -40,9 +48,13 @@ impl<'s> Block<'s> {
                 self.state.pending.push(' ');
             }
 
-            self.state
-                .pending
-                .extend(EscapeMarkdown::new(SqueezeWhitespace::new(s.chars())));
+            if raw {
+                self.state.pending.push_str(s);
+            } else {
+                self.state
+                    .pending
+                    .extend(EscapeMarkdown::new(SqueezeWhitespace::new(s.chars())));
+            }
 
             self.trailing_whitespace = s.chars().last().map(is_whitespace) == Some(true);
         }

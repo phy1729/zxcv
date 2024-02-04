@@ -40,7 +40,6 @@ pub(crate) fn render(html: &str, url: &Url) -> String {
     state.render()
 }
 
-#[allow(clippy::only_used_in_recursion)]
 fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
     match node.value() {
         Node::Text(t) => block.push(t),
@@ -52,6 +51,21 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 let mut block = block.new_block();
                 node.children()
                     .for_each(|node| render_node_inner(node, url, &mut block));
+            }
+
+            "img" => {
+                if let Some(src) = e.attr("src") {
+                    block.push_raw("![");
+                    block.push(e.attr("alt").unwrap_or_default());
+                    block.push_raw("](");
+                    block.push_raw(
+                        url.join(src)
+                            .map(Into::<String>::into)
+                            .as_deref()
+                            .unwrap_or(src),
+                    );
+                    block.push_raw(")");
+                }
             }
 
             _ => {
@@ -97,5 +111,7 @@ mod tests {
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
         (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
         (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
+        (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
+        (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
     );
 }
