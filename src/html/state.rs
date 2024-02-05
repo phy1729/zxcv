@@ -1,3 +1,6 @@
+use textwrap::Options;
+use unicode_width::UnicodeWidthStr;
+
 use super::escape_markdown::EscapeMarkdown;
 use super::squeeze_whitespace::is_whitespace;
 use super::squeeze_whitespace::SqueezeWhitespace;
@@ -7,6 +10,9 @@ use crate::LINE_LENGTH;
 pub(super) struct State {
     result: String,
     pending: String,
+    initial_prefix: String,
+    subsequent_prefix: String,
+    been_pushed: bool,
 }
 
 impl State {
@@ -14,7 +20,9 @@ impl State {
         Block {
             state: self,
             trailing_whitespace: false,
+            prefixes: None,
             in_code: false,
+            in_item: false,
         }
     }
 
@@ -28,10 +36,28 @@ impl State {
 pub(super) struct Block<'s> {
     state: &'s mut State,
     trailing_whitespace: bool,
+    prefixes: Option<(&'s str, &'s str, String)>,
     in_code: bool,
+    in_item: bool,
 }
 
 impl<'s> Block<'s> {
+    pub fn prefix(&mut self, initial_prefix: &'s str, subsequent_prefix: &'s str) {
+        debug_assert!(self.prefixes.is_none());
+        debug_assert_eq!(initial_prefix.width(), subsequent_prefix.width());
+
+        let mut new_initial_prefix = if self.state.been_pushed {
+            self.state.subsequent_prefix.clone()
+        } else {
+            self.state.initial_prefix.clone()
+        };
+        new_initial_prefix.push_str(initial_prefix);
+        let previous_prefix = std::mem::replace(&mut self.state.initial_prefix, new_initial_prefix);
+        self.state.subsequent_prefix.push_str(subsequent_prefix);
+        self.state.been_pushed = false;
+        self.prefixes = Some((initial_prefix, subsequent_prefix, previous_prefix));
+    }
+
     pub fn start_code(&mut self) {
         self.in_code = true;
     }
@@ -81,9 +107,20 @@ impl<'s> Block<'s> {
     fn push_pending(&mut self) {
         if !self.state.pending.is_empty() {
             self.push_gap();
-            self.state
-                .result
-                .push_str(&textwrap::fill(&self.state.pending, LINE_LENGTH));
+            self.state.result.push_str(&textwrap::fill(
+                &self.state.pending,
+                Options::new(std::cmp::max(
+                    LINE_LENGTH,
+                    self.state.initial_prefix.len() + 20,
+                ))
+                .initial_indent(if self.state.been_pushed {
+                    &self.state.subsequent_prefix
+                } else {
+                    self.state.been_pushed = true;
+                    &self.state.initial_prefix
+                })
+                .subsequent_indent(&self.state.subsequent_prefix),
+            ));
             self.state.pending.clear();
             self.trailing_whitespace = false;
         }
@@ -91,16 +128,29 @@ impl<'s> Block<'s> {
 
     fn push_gap(&mut self) {
         if !self.state.result.is_empty() {
-            self.state.result.push_str("\n\n");
+            if !self.in_item {
+                self.state.result.push('\n');
+            }
+            self.state.result.push('\n');
         }
     }
 
     pub fn new_block(&mut self) -> Block<'_> {
+        self.new_block_inner(self.in_item)
+    }
+
+    pub fn new_item(&mut self) -> Block<'_> {
+        self.new_block_inner(true)
+    }
+
+    fn new_block_inner(&mut self, in_item: bool) -> Block<'_> {
         self.push_pending();
         Block {
             state: self.state,
             trailing_whitespace: false,
-            in_code: false,
+            prefixes: None,
+            in_code: self.in_code,
+            in_item,
         }
     }
 
@@ -117,6 +167,17 @@ impl<'s> Block<'s> {
 impl Drop for Block<'_> {
     fn drop(&mut self) {
         self.push_pending();
+        if let Some((initial_prefix, subsequent_prefix, previous_prefix)) =
+            std::mem::take(&mut self.prefixes)
+        {
+            debug_assert!(self.state.initial_prefix.ends_with(initial_prefix));
+            debug_assert!(self.state.subsequent_prefix.ends_with(subsequent_prefix));
+
+            self.state.initial_prefix = previous_prefix;
+            self.state
+                .subsequent_prefix
+                .truncate(self.state.subsequent_prefix.len() - subsequent_prefix.len());
+        }
     }
 }
 
@@ -129,12 +190,28 @@ pub(super) struct RawBlock<'s> {
 impl<'s> RawBlock<'s> {
     pub fn push(&mut self, s: &str) {
         for line in s.split_inclusive('\n') {
+            self.handle_prefix(line == "\n");
             self.state.result.push_str(line);
             self.at_sol = line.ends_with('\n');
         }
     }
 
+    fn handle_prefix(&mut self, trim: bool) {
+        if self.at_sol {
+            let prefix = if self.state.been_pushed {
+                &self.state.subsequent_prefix
+            } else {
+                self.state.been_pushed = true;
+                &self.state.initial_prefix
+            };
+            self.state
+                .result
+                .push_str(if trim { prefix.trim_end() } else { prefix });
+        }
+    }
+
     pub fn newline(&mut self) {
+        self.handle_prefix(true);
         self.state.result.push('\n');
         self.at_sol = true;
     }

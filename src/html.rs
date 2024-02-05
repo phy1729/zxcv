@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use ego_tree::NodeRef;
+use scraper::node::Element;
 use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
@@ -211,6 +212,17 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 block.push("```");
             }
 
+            "ul" => {
+                let mut block = block.new_block();
+                node.children()
+                    .filter(|n| n.value().as_element().map(Element::name) == Some("li"))
+                    .for_each(|node| {
+                        let mut item_block = block.new_item();
+                        item_block.prefix("* ", "  ");
+                        render_node_inner(node, url, &mut item_block);
+                    });
+            }
+
             "script" | "style" | "template" | "title" => {}
 
             _ => {
@@ -282,6 +294,10 @@ mod tests {
         (pre_in_p, "<p>foo <pre>\nbar\n</pre>baz</p>", "foo\n\n```\nbar\n```\n\nbaz"),
         (pre_language, "<pre><code class=\"language-foo bar\">foo\n    bar\n</code></pre>", "```foo\nfoo\n    bar\n```"),
         (pre_br, "<pre>foo<br>bar</pre>", "```\nfoo\nbar\n```"),
+        (ul, "<ul><li>foo</li><li>bar</li></ul>", "* foo\n* bar"),
+        (ul_nested, "<ul><li>foo</li><li><ul><li>bar</li><li>baz</li></ul></li><li>quux</li></ul>", "* foo\n* * bar\n  * baz\n* quux"),
+        (ul_nested_whitespace, "<ul><li>foo</li><li>before<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\nafter</li><li>quux</li></ul>", "* foo\n* before\n  * bar\n  * baz\n  after\n* quux"),
+        (ul_pre, "<ul><li>foo</li><li><pre>bar</pre></li><li>baz</li></ul>", "* foo\n* ```\n  bar\n  ```\n* baz"),
         (script, "foo <script>bar</script>baz", "foo baz"),
     );
 }
