@@ -344,5 +344,6 @@ mod tests {
         (ul_nested_whitespace, "<ul><li>foo</li><li>before<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\nafter</li><li>quux</li></ul>", "* foo\n* before\n  * bar\n  * baz\n  after\n* quux"),
         (ul_pre, "<ul><li>foo</li><li><pre>bar</pre></li><li>baz</li></ul>", "* foo\n* ```\n  bar\n  ```\n* baz"),
         (script, "foo <script>bar</script>baz", "foo baz"),
+        (cthulhu, "<p>foo<blockquote>bar<ul><li>baz</li><li><pre>quux</pre></li><li><blockquote>foo<pre>bar</pre>baz</blockquote></li></ul></blockquote>quux</p>", "foo\n\n> bar\n> * baz\n> * ```\n>   quux\n>   ```\n> * > foo\n>   > ```\n>   > bar\n>   > ```\n>   > baz\n\nquux"),
     );
 }
