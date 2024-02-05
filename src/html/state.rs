@@ -21,6 +21,7 @@ impl State {
             state: self,
             trailing_whitespace: false,
             prefixes: None,
+            must_emit: false,
             in_code: false,
             in_item: false,
         }
@@ -32,11 +33,13 @@ impl State {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub(super) struct Block<'s> {
     state: &'s mut State,
     trailing_whitespace: bool,
     prefixes: Option<(&'s str, &'s str, String)>,
+    must_emit: bool,
     in_code: bool,
     in_item: bool,
 }
@@ -56,6 +59,11 @@ impl<'s> Block<'s> {
         self.state.subsequent_prefix.push_str(subsequent_prefix);
         self.state.been_pushed = false;
         self.prefixes = Some((initial_prefix, subsequent_prefix, previous_prefix));
+    }
+
+    pub fn must_emit(&mut self) {
+        debug_assert!(self.prefixes.is_some());
+        self.must_emit = true;
     }
 
     pub fn start_code(&mut self) {
@@ -104,7 +112,7 @@ impl<'s> Block<'s> {
         self.trailing_whitespace = false;
     }
 
-    fn push_pending(&mut self) {
+    fn push_pending(&mut self, drop: bool) {
         if !self.state.pending.is_empty() {
             self.push_gap();
             self.state.result.push_str(&textwrap::fill(
@@ -123,6 +131,11 @@ impl<'s> Block<'s> {
             ));
             self.state.pending.clear();
             self.trailing_whitespace = false;
+        } else if drop && self.must_emit && !self.state.been_pushed {
+            self.push_gap();
+            self.state
+                .result
+                .push_str(self.state.initial_prefix.trim_end());
         }
     }
 
@@ -144,18 +157,19 @@ impl<'s> Block<'s> {
     }
 
     fn new_block_inner(&mut self, in_item: bool) -> Block<'_> {
-        self.push_pending();
+        self.push_pending(false);
         Block {
             state: self.state,
             trailing_whitespace: false,
             prefixes: None,
+            must_emit: false,
             in_code: self.in_code,
             in_item,
         }
     }
 
     pub fn new_raw_block(&mut self) -> RawBlock<'_> {
-        self.push_pending();
+        self.push_pending(false);
         self.push_gap();
         RawBlock {
             state: self.state,
@@ -166,7 +180,7 @@ impl<'s> Block<'s> {
 
 impl Drop for Block<'_> {
     fn drop(&mut self) {
-        self.push_pending();
+        self.push_pending(true);
         if let Some((initial_prefix, subsequent_prefix, previous_prefix)) =
             std::mem::take(&mut self.prefixes)
         {

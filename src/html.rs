@@ -207,6 +207,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                             let initial_prefix = format!("{item_count:num_width$}. ");
                             let mut item_block = block.new_item();
                             item_block.prefix(&initial_prefix, &subsequent_prefix);
+                            item_block.must_emit();
                             render_node_inner(node, url, &mut item_block);
                         });
                 }
@@ -242,6 +243,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                     .for_each(|node| {
                         let mut item_block = block.new_item();
                         item_block.prefix("* ", "  ");
+                        item_block.must_emit();
                         render_node_inner(node, url, &mut item_block);
                     });
             }
@@ -312,6 +314,7 @@ mod tests {
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
         (ol, "<ol><li>foo</li><li>bar</li></ol>", "1. foo\n2. bar"),
         (ol_whitespace, "<ol> <li>foo</li> <li>bar</li> <li>baz</li> <li>quux</li> <li>not ten</li> </ol>", "1. foo\n2. bar\n3. baz\n4. quux\n5. not ten"),
+        (ol_empty_item, "<ol><li>foo</li><li></li><li>bar</li></ol>", "1. foo\n2.\n3. bar"),
         (ol_ten, "<ol><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li><li>6</li><li>7</li><li>8</li><li>9</li><li>10</li></ol>", " 1. 1\n 2. 2\n 3. 3\n 4. 4\n 5. 5\n 6. 6\n 7. 7\n 8. 8\n 9. 9\n10. 10"),
         (pre, "<pre>\nfoo\n    bar\n</pre>", "```\nfoo\n    bar\n```"),
         (pre_no_whitespace_compress, "<pre>\nfoo  bar\n</pre>", "```\nfoo  bar\n```"),
@@ -321,6 +324,7 @@ mod tests {
         (pre_language, "<pre><code class=\"language-foo bar\">foo\n    bar\n</code></pre>", "```foo\nfoo\n    bar\n```"),
         (pre_br, "<pre>foo<br>bar</pre>", "```\nfoo\nbar\n```"),
         (ul, "<ul><li>foo</li><li>bar</li></ul>", "* foo\n* bar"),
+        (ul_empty_item, "<ul><li>foo</li><li><li>bar</li></ul>", "* foo\n*\n* bar"),
         (ul_nested, "<ul><li>foo</li><li><ul><li>bar</li><li>baz</li></ul></li><li>quux</li></ul>", "* foo\n* * bar\n  * baz\n* quux"),
         (ul_nested_whitespace, "<ul><li>foo</li><li>before<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\nafter</li><li>quux</li></ul>", "* foo\n* before\n  * bar\n  * baz\n  after\n* quux"),
         (ul_pre, "<ul><li>foo</li><li><pre>bar</pre></li><li>baz</li></ul>", "* foo\n* ```\n  bar\n  ```\n* baz"),
