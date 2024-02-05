@@ -9,6 +9,7 @@ use url::Url;
 use crate::Article;
 use crate::Content;
 use crate::TextType;
+use crate::LINE_LENGTH;
 
 pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     let api_url = url.join("/w/api.php")?;
@@ -43,7 +44,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     if let Some(slot) = revision.slots.remove("main") {
         Ok(Content::Text(TextType::Article(Article {
             title: page.title,
-            body: slot.star,
+            body: textwrap::fill(&slot.star, LINE_LENGTH),
         })))
     } else {
         bail!(

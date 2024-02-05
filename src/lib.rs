@@ -116,12 +116,7 @@ impl TextType {
     fn write(&self, writer: &mut impl Write) -> io::Result<()> {
         match self {
             Self::Article(article) => {
-                write!(
-                    writer,
-                    "{}\n\n{}",
-                    article.title,
-                    textwrap::fill(&article.body, LINE_LENGTH)
-                )
+                write!(writer, "{}\n\n{}", article.title, article.body)
             }
             Self::Post(post) => write!(writer, "{post}"),
             Self::PostThread(thread) => {
