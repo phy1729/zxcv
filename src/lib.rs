@@ -307,8 +307,10 @@ fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content
         gitea::process,
         mastodon::process,
         nextcloud::process,
+        process_main_text,
         process_single_video,
         process_single_pre,
+        process_body,
     ] {
         if let Some(result) = process(agent, url, tree) {
             return result;
@@ -316,6 +318,38 @@ fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content
     }
 
     Ok(Content::Text(TextType::Raw(tree.html().into())))
+}
+
+fn process_main_text(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+    process_article_selectors(&["main", "article", "div[role=\"main\"]"], url, tree)
+}
+
+fn process_body(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+    process_article_selectors(&["body"], url, tree)
+}
+
+fn process_article_selectors(
+    selectors: &[&str],
+    url: &Url,
+    tree: &Html,
+) -> Option<anyhow::Result<Content>> {
+    let Some(element) = selectors
+        .iter()
+        .find_map(|t| html::select_single_element(tree, t))
+    else {
+        return None;
+    };
+
+    Some(Ok(Content::Text(TextType::Article(Article {
+        // You may assume just title suffices, but some pages have an additional title outside of
+        // head. Also can't use use "head title" as some pages put their title in body.
+        title: ["title", "head title"]
+            .iter()
+            .find_map(|t| html::select_single_element(tree, t))
+            .map(|e| e.inner_html().trim().to_owned())
+            .unwrap_or_default(),
+        body: html::render_node(*element, url),
+    }))))
 }
 
 fn process_single_video(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {

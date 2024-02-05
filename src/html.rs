@@ -53,12 +53,12 @@ pub(crate) fn select_single_element<'a>(
 }
 
 pub(crate) fn render(html: &str, url: &Url) -> String {
+    render_node(*Html::parse_fragment(html).root_element(), url)
+}
+
+pub(crate) fn render_node(node: NodeRef<'_, Node>, url: &Url) -> String {
     let mut state = State::default();
-    render_node_inner(
-        *Html::parse_fragment(html).root_element(),
-        url,
-        &mut state.root_block(),
-    );
+    render_node_inner(node, url, &mut state.root_block());
     state.render()
 }
 
