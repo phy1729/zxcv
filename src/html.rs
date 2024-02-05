@@ -189,6 +189,29 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 }
             }
 
+            "ol" => {
+                let child_count = node
+                    .children()
+                    .filter(|n| n.value().as_element().map(Element::name) == Some("li"))
+                    .count();
+                if child_count != 0 {
+                    let num_width: usize = child_count.ilog10() as usize + 1;
+                    let subsequent_prefix = format!("{:num_width$}  ", "");
+
+                    let mut block = block.new_block();
+                    let mut item_count = 0;
+                    node.children()
+                        .filter(|n| n.value().as_element().map(Element::name) == Some("li"))
+                        .for_each(|node| {
+                            item_count += 1;
+                            let initial_prefix = format!("{item_count:num_width$}. ");
+                            let mut item_block = block.new_item();
+                            item_block.prefix(&initial_prefix, &subsequent_prefix);
+                            render_node_inner(node, url, &mut item_block);
+                        });
+                }
+            }
+
             "pre" => {
                 let mut block = block.new_raw_block();
                 block.push("```");
@@ -287,6 +310,9 @@ mod tests {
         (header_h3, "<h3>header</h2>", "### header"),
         (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
+        (ol, "<ol><li>foo</li><li>bar</li></ol>", "1. foo\n2. bar"),
+        (ol_whitespace, "<ol> <li>foo</li> <li>bar</li> <li>baz</li> <li>quux</li> <li>not ten</li> </ol>", "1. foo\n2. bar\n3. baz\n4. quux\n5. not ten"),
+        (ol_ten, "<ol><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li><li>6</li><li>7</li><li>8</li><li>9</li><li>10</li></ol>", " 1. 1\n 2. 2\n 3. 3\n 4. 4\n 5. 5\n 6. 6\n 7. 7\n 8. 8\n 9. 9\n10. 10"),
         (pre, "<pre>\nfoo\n    bar\n</pre>", "```\nfoo\n    bar\n```"),
         (pre_no_whitespace_compress, "<pre>\nfoo  bar\n</pre>", "```\nfoo  bar\n```"),
         (pre_no_newline, "<pre>\n  foo</pre>", "```\n  foo\n```"),
