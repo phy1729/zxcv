@@ -235,6 +235,13 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 process_generic(&agent, url)?
             }
 
+            "pastebin.mozilla.org" => {
+                if !url.path().ends_with("/raw") {
+                    url.set_path(&(url.path().to_owned() + "/raw"));
+                };
+                process_generic(&agent, url)?
+            }
+
             "mypy-play.net" => {
                 let gist_id = url
                     .query_pairs()
