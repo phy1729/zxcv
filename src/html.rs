@@ -17,6 +17,22 @@ mod state;
 use self::state::Block;
 use self::state::State;
 
+pub(crate) trait Selectable {
+    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>>;
+}
+
+impl Selectable for Html {
+    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> scraper::html::Select<'a, 'b> {
+        self.select(selector)
+    }
+}
+
+impl Selectable for ElementRef<'_> {
+    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> scraper::element_ref::Select<'a, 'b> {
+        self.select(selector)
+    }
+}
+
 /// Return the single element matched by `selector` or `None` if there are zero or more than one
 /// matches.
 ///
@@ -24,7 +40,7 @@ use self::state::State;
 ///
 /// It is the caller's responsibility to ensure the `selector` is valid.
 pub(crate) fn select_single_element<'a>(
-    tree: &'a Html,
+    tree: &'a impl Selectable,
     selector_string: &str,
 ) -> Option<ElementRef<'a>> {
     let selector = Selector::parse(selector_string).expect("Caller must supply a valid selector");
