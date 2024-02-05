@@ -103,10 +103,45 @@ impl<'s> Block<'s> {
             in_code: false,
         }
     }
+
+    pub fn new_raw_block(&mut self) -> RawBlock<'_> {
+        self.push_pending();
+        self.push_gap();
+        RawBlock {
+            state: self.state,
+            at_sol: true,
+        }
+    }
 }
 
 impl Drop for Block<'_> {
     fn drop(&mut self) {
         self.push_pending();
+    }
+}
+
+#[derive(Debug)]
+pub(super) struct RawBlock<'s> {
+    state: &'s mut State,
+    at_sol: bool,
+}
+
+impl<'s> RawBlock<'s> {
+    pub fn push(&mut self, s: &str) {
+        for line in s.split_inclusive('\n') {
+            self.state.result.push_str(line);
+            self.at_sol = line.ends_with('\n');
+        }
+    }
+
+    pub fn newline(&mut self) {
+        self.state.result.push('\n');
+        self.at_sol = true;
+    }
+
+    pub fn ensure_newline(&mut self) {
+        if !self.at_sol {
+            self.newline();
+        }
     }
 }

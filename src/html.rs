@@ -188,6 +188,29 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 }
             }
 
+            "pre" => {
+                let mut block = block.new_raw_block();
+                block.push("```");
+                if let Some(lang) = select_single_element(
+                    &ElementRef::wrap(node).expect("node is Node::Element"),
+                    "code",
+                )
+                .and_then(|c| c.attr("class"))
+                .and_then(|c| c.split(' ').find_map(|x| x.strip_prefix("language-")))
+                {
+                    block.push(lang);
+                }
+                block.newline();
+
+                node.descendants().for_each(|n| match n.value() {
+                    Node::Element(e) if e.name() == "br" => block.newline(),
+                    Node::Text(t) => block.push(t),
+                    _ => {}
+                });
+                block.ensure_newline();
+                block.push("```");
+            }
+
             "script" | "style" | "template" | "title" => {}
 
             _ => {
@@ -252,6 +275,13 @@ mod tests {
         (header_h3, "<h3>header</h2>", "### header"),
         (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
+        (pre, "<pre>\nfoo\n    bar\n</pre>", "```\nfoo\n    bar\n```"),
+        (pre_no_whitespace_compress, "<pre>\nfoo  bar\n</pre>", "```\nfoo  bar\n```"),
+        (pre_no_newline, "<pre>\n  foo</pre>", "```\n  foo\n```"),
+        (pre_following_text, "foo bar<pre>baz</pre>", "foo bar\n\n```\nbaz\n```"),
+        (pre_in_p, "<p>foo <pre>\nbar\n</pre>baz</p>", "foo\n\n```\nbar\n```\n\nbaz"),
+        (pre_language, "<pre><code class=\"language-foo bar\">foo\n    bar\n</code></pre>", "```foo\nfoo\n    bar\n```"),
+        (pre_br, "<pre>foo<br>bar</pre>", "```\nfoo\nbar\n```"),
         (script, "foo <script>bar</script>baz", "foo baz"),
     );
 }
