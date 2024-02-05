@@ -12,7 +12,7 @@ pub(super) struct State {
     pending: String,
     initial_prefix: String,
     subsequent_prefix: String,
-    been_pushed: bool,
+    gap_prefix_offset: usize,
 }
 
 impl State {
@@ -49,7 +49,7 @@ impl<'s> Block<'s> {
         debug_assert!(self.prefixes.is_none());
         debug_assert_eq!(initial_prefix.width(), subsequent_prefix.width());
 
-        let mut new_initial_prefix = if self.state.been_pushed {
+        let mut new_initial_prefix = if self.state.gap_prefix_offset == 0 {
             self.state.subsequent_prefix.clone()
         } else {
             self.state.initial_prefix.clone()
@@ -57,7 +57,7 @@ impl<'s> Block<'s> {
         new_initial_prefix.push_str(initial_prefix);
         let previous_prefix = std::mem::replace(&mut self.state.initial_prefix, new_initial_prefix);
         self.state.subsequent_prefix.push_str(subsequent_prefix);
-        self.state.been_pushed = false;
+        self.state.gap_prefix_offset += subsequent_prefix.len();
         self.prefixes = Some((initial_prefix, subsequent_prefix, previous_prefix));
     }
 
@@ -121,17 +121,17 @@ impl<'s> Block<'s> {
                     LINE_LENGTH,
                     self.state.initial_prefix.len() + 20,
                 ))
-                .initial_indent(if self.state.been_pushed {
+                .initial_indent(if self.state.gap_prefix_offset == 0 {
                     &self.state.subsequent_prefix
                 } else {
-                    self.state.been_pushed = true;
+                    self.state.gap_prefix_offset = 0;
                     &self.state.initial_prefix
                 })
                 .subsequent_indent(&self.state.subsequent_prefix),
             ));
             self.state.pending.clear();
             self.trailing_whitespace = false;
-        } else if drop && self.must_emit && !self.state.been_pushed {
+        } else if drop && self.must_emit && self.state.gap_prefix_offset != 0 {
             self.push_gap();
             self.state
                 .result
@@ -143,6 +143,11 @@ impl<'s> Block<'s> {
         if !self.state.result.is_empty() {
             if !self.in_item {
                 self.state.result.push('\n');
+                self.state.result.push_str(
+                    self.state.subsequent_prefix
+                        [..self.state.subsequent_prefix.len() - self.state.gap_prefix_offset]
+                        .trim_end(),
+                );
             }
             self.state.result.push('\n');
         }
@@ -187,6 +192,10 @@ impl Drop for Block<'_> {
             debug_assert!(self.state.initial_prefix.ends_with(initial_prefix));
             debug_assert!(self.state.subsequent_prefix.ends_with(subsequent_prefix));
 
+            self.state.gap_prefix_offset = self
+                .state
+                .gap_prefix_offset
+                .saturating_sub(initial_prefix.len());
             self.state.initial_prefix = previous_prefix;
             self.state
                 .subsequent_prefix
@@ -212,10 +221,10 @@ impl<'s> RawBlock<'s> {
 
     fn handle_prefix(&mut self, trim: bool) {
         if self.at_sol {
-            let prefix = if self.state.been_pushed {
+            let prefix = if self.state.gap_prefix_offset == 0 {
                 &self.state.subsequent_prefix
             } else {
-                self.state.been_pushed = true;
+                self.state.gap_prefix_offset = 0;
                 &self.state.initial_prefix
             };
             self.state

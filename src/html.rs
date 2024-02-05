@@ -113,6 +113,13 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 block.push_raw("**");
             }
 
+            "blockquote" => {
+                let mut block = block.new_block();
+                block.prefix("> ", "> ");
+                node.children()
+                    .for_each(|node| render_node_inner(node, url, &mut block));
+            }
+
             "br" => block.newline(),
 
             "code" => {
@@ -296,6 +303,13 @@ mod tests {
         (link_anchor, "<a href=\"#somewhere\">text</a>", "[text](https://example.com/#somewhere)"),
         (link_anchor_useless, "<h3>header <a href=\"#somewhere\">#</a></h3>", "### header"),
         (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
+        (blockquote, "<blockquote>foo</blockquote>", "> foo"),
+        (blockquote_empty, "<blockquote></blockquote>", ""),
+        (blockquote_over_ps, "before <blockquote>\n<p>foo</p><p>bar</p>\n</blockquote> after", "before\n\n> foo\n>\n> bar\n\nafter"),
+        (blockquote_adjacent, "<blockquote>foo</blockquote><blockquote>bar</blockquote>", "> foo\n\n> bar"),
+        (blockquote_nested_empty, "<blockquote>foo<blockquote></blockquote>bar</blockquote", "> foo\n>\n> bar"),
+        (blockquote_pre, "<blockquote>foo<pre>  bar</pre>baz</blockquote>", "> foo\n>\n> ```\n>   bar\n> ```\n>\n> baz"),
+        (blockquote_pre_newline, "<blockquote>foo<pre>  bar\n</pre>baz</blockquote>", "> foo\n>\n> ```\n>   bar\n> ```\n>\n> baz"),
         (br, "foo<br>bar", "foo\nbar"),
         (br_space, "foo<br> bar", "foo\nbar"),
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
@@ -323,6 +337,7 @@ mod tests {
         (pre_in_p, "<p>foo <pre>\nbar\n</pre>baz</p>", "foo\n\n```\nbar\n```\n\nbaz"),
         (pre_language, "<pre><code class=\"language-foo bar\">foo\n    bar\n</code></pre>", "```foo\nfoo\n    bar\n```"),
         (pre_br, "<pre>foo<br>bar</pre>", "```\nfoo\nbar\n```"),
+        (pre_br_twice, "<blockquote><pre>foo<br><br>bar</pre></blockquote>", "> ```\n> foo\n>\n> bar\n> ```"),
         (ul, "<ul><li>foo</li><li>bar</li></ul>", "* foo\n* bar"),
         (ul_empty_item, "<ul><li>foo</li><li><li>bar</li></ul>", "* foo\n*\n* bar"),
         (ul_nested, "<ul><li>foo</li><li><ul><li>bar</li><li>baz</li></ul></li><li>quux</li></ul>", "* foo\n* * bar\n  * baz\n* quux"),
