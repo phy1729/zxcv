@@ -28,7 +28,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
     Ok(Content::Text(TextType::PostThread(PostThread {
         before: vec![],
         main: Post {
-            author: story.submitter_user.username,
+            author: story.submitter_user,
             body,
             urls: vec![story.url],
         },
@@ -36,7 +36,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
             .comments
             .into_iter()
             .map(|c| Post {
-                author: c.commenting_user.username,
+                author: c.commenting_user,
                 body: c.comment_plain,
                 urls: vec![],
             })
@@ -48,7 +48,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
 struct Story {
     comments: Vec<Comment>,
     description_plain: String,
-    submitter_user: User,
+    submitter_user: String,
     title: String,
     url: String,
 }
@@ -56,10 +56,5 @@ struct Story {
 #[derive(Debug, Deserialize)]
 struct Comment {
     comment_plain: String,
-    commenting_user: User,
-}
-
-#[derive(Debug, Deserialize)]
-struct User {
-    username: String,
+    commenting_user: String,
 }
