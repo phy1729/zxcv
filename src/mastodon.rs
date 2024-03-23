@@ -18,12 +18,17 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
 
     let is_mastodon = html::select_single_element(tree, "div#mastodon").is_some();
 
+    // Pleroma implements the Mastodon API with some differences.
+    let is_pleroma = html::select_single_element(tree, "noscript")
+        .map(|e| e.inner_html().contains("Pleroma"))
+        == Some(true);
+
     // Sharkey implements the Mastodon API.
     let is_sharkey = html::select_single_element(tree, "meta[name=\"application-name\"]")
         .and_then(|e| e.attr("content"))
         == Some("Sharkey");
 
-    if !(is_akkoma || is_mastodon || is_sharkey) {
+    if !(is_akkoma || is_mastodon || is_pleroma || is_sharkey) {
         return None;
     }
 
