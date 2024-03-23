@@ -289,17 +289,23 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
 fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     let response = agent.request_url("GET", url).call()?;
     let content_type = response.content_type().to_owned();
+    let final_url =
+        Url::parse(response.get_url()).expect("ureq internally stores the url as a Url");
 
     Ok(match content_type.as_str() {
         "application/pdf" => Content::Pdf(response.into_reader()),
         "image/gif" | "image/jpeg" | "image/png" | "image/svg+xml" => {
             Content::Image(response.into_reader())
         }
-        "text/html" => process_html(agent, url, &Html::parse_document(&response.into_string()?))?,
+        "text/html" => process_html(
+            agent,
+            &final_url,
+            &Html::parse_document(&response.into_string()?),
+        )?,
         "text/plain" | "text/x-shellscript" => {
             Content::Text(TextType::Raw(read_raw_response(response)?))
         }
-        "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(url.clone()),
+        "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(final_url),
         _ => bail!("Content type {content_type} is not supported."),
     })
 }
