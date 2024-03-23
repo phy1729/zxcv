@@ -53,6 +53,7 @@ use url::Url;
 mod config;
 pub use config::Config;
 
+mod bsky;
 mod cgit;
 mod discourse;
 mod gitea;
@@ -159,6 +160,7 @@ pub fn show_url(config: &Config, url: &str) -> anyhow::Result<()> {
     show_content(config, get_content(&mut url)?)
 }
 
+#[allow(clippy::too_many_lines)]
 fn get_content(url: &mut Url) -> anyhow::Result<Content> {
     let agent = Agent::new();
 
@@ -170,6 +172,8 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 };
                 process_generic(&agent, url)?
             }
+
+            "bsky.app" => bsky::process(&agent, url)?,
 
             "p.dav1d.de" => {
                 if let Some((raw_path, _)) = url.path().rsplit_once('.') {
