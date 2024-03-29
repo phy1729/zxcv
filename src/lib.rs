@@ -302,7 +302,7 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
             &final_url,
             &Html::parse_document(&response.into_string()?),
         )?,
-        "text/plain" | "text/x-shellscript" => {
+        _ if content_type.starts_with("text/") => {
             Content::Text(TextType::Raw(read_raw_response(response)?))
         }
         "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(final_url),
