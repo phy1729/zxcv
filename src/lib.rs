@@ -288,11 +288,11 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
 
 fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     let response = agent.request_url("GET", url).call()?;
-    let content_type = response.content_type().to_owned();
+    let content_type = response.content_type();
     let final_url =
         Url::parse(response.get_url()).expect("ureq internally stores the url as a Url");
 
-    Ok(match content_type.as_str() {
+    Ok(match content_type {
         "application/pdf" => Content::Pdf(response.into_reader()),
         "image/gif" | "image/jpeg" | "image/png" | "image/svg+xml" => {
             Content::Image(response.into_reader())
