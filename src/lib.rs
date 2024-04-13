@@ -319,7 +319,6 @@ fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content
         nextcloud::process,
         process_main_text,
         process_single_video,
-        process_single_pre,
         process_body,
     ] {
         if let Some(result) = process(agent, url, tree) {
@@ -391,11 +390,6 @@ fn process_single_video(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Res
         }
         bail!("No supported video formats");
     })())
-}
-
-fn process_single_pre(_: &Agent, _: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    html::select_single_element(tree, "pre")
-        .map(|p| Ok(Content::Text(TextType::Raw(p.inner_html().into()))))
 }
 
 /// Display the image specfied by `selector`.
