@@ -16,7 +16,7 @@ ego-tree = "0.6.2"
 getopt = "1"
 percent-encoding = "2.1"
 pledge = "0.4"
-scraper = { version = "0.18.1", default-features = false }
+scraper = { version = "0.19", default-features = false }
 # Increased for toml
 serde = { version = "1.0.145", features = ["derive"] }
 tempfile = "3"
