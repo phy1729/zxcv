@@ -25,7 +25,7 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
             .unwrap_or_else(|| "".split('/'))
             .collect();
 
-        if path_segments.len() == 3 && path_segments[0] == "t" {
+        if path_segments.len() >= 3 && path_segments[0] == "t" {
             let mut topic: Topic = agent
                 .request_url(
                     "GET",
