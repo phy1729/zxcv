@@ -388,9 +388,7 @@ fn site_tag(hostname: &str) -> Option<&'static str> {
 }
 
 pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
-    let Some(site_name) = url.host_str().and_then(site_tag) else {
-        return None;
-    };
+    let site_name = url.host_str().and_then(site_tag)?;
 
     Some((|| {
         let path_segments: Vec<_> = url

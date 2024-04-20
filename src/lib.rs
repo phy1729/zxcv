@@ -342,12 +342,9 @@ fn process_article_selectors(
     url: &Url,
     tree: &Html,
 ) -> Option<anyhow::Result<Content>> {
-    let Some(element) = selectors
+    let element = selectors
         .iter()
-        .find_map(|t| html::select_single_element(tree, t))
-    else {
-        return None;
-    };
+        .find_map(|t| html::select_single_element(tree, t))?;
 
     Some(Ok(Content::Text(TextType::Article(Article {
         // You may assume just title suffices, but some pages have an additional title outside of
@@ -362,9 +359,7 @@ fn process_article_selectors(
 }
 
 fn process_single_video(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    let Some(video) = html::select_single_element(tree, "video") else {
-        return None;
-    };
+    let video = html::select_single_element(tree, "video")?;
 
     Some((|| {
         if let Some(src) = video.attr("src") {
