@@ -11,7 +11,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.14"
-base64 = "0.21"
+base64 = "0.22"
 ego-tree = "0.6.2"
 getopt = "1"
 percent-encoding = "2.1"
