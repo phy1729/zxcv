@@ -23,13 +23,13 @@ pub(crate) trait Selectable {
 }
 
 impl Selectable for Html {
-    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> scraper::html::Select<'a, 'b> {
+    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>> {
         self.select(selector)
     }
 }
 
 impl Selectable for ElementRef<'_> {
-    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> scraper::element_ref::Select<'a, 'b> {
+    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>> {
         self.select(selector)
     }
 }
