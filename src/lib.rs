@@ -271,7 +271,8 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
 
             "xkcd.com" => image_via_selector(&agent, url, "#comic > img")?,
 
-            "youtu.be" | "youtube.com" | "www.youtube.com" => Content::Video(url.clone()),
+            "youtu.be" | "youtube.com" | "m.youtube.com" | "music.youtube.com"
+            | "www.youtube.com" => Content::Video(url.clone()),
 
             _ => {
                 if let Some(result) = stackoverflow::process(&agent, url) {
