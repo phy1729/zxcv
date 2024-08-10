@@ -187,10 +187,10 @@ enum Embed {
 impl Embed {
     fn urls(self) -> Vec<String> {
         match self {
-            Embed::External(e) => vec![e.external.uri],
-            Embed::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
-            Embed::Record(_) => vec![],
-            Embed::RecordWithMedia(r) => match r.media {
+            Self::External(e) => vec![e.external.uri],
+            Self::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
+            Self::Record(_) => vec![],
+            Self::RecordWithMedia(r) => match r.media {
                 Media::External(e) => vec![e.external.uri],
                 Media::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
             },

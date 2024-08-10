@@ -17,6 +17,7 @@
     clippy::str_to_string,
     clippy::tests_outside_test_module,
     clippy::unwrap_used,
+    clippy::use_self,
     rustdoc::missing_crate_level_docs,
     rustdoc::unescaped_backticks
 )]
