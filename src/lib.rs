@@ -13,8 +13,6 @@
     missing_docs,
     unsafe_code,
     clippy::cargo,
-    clippy::missing_errors_doc,
-    clippy::missing_panics_doc,
     clippy::pedantic,
     clippy::str_to_string,
     clippy::tests_outside_test_module,
