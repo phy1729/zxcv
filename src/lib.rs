@@ -168,6 +168,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
     };
 
     Ok(if let Some(hostname) = url.host_str() {
+        #[allow(clippy::match_same_arms)]
         match hostname {
             "bsky.app" => bsky::process(&agent, url)?,
 
@@ -196,6 +197,8 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     .1;
                 github::gist::process_by_id(&agent, &gist_id)?
             }
+
+            "twitch.tv" => Content::Video(url.clone()),
 
             "en.wikipedia.org" => wikimedia::process(&agent, url)?,
 
