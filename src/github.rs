@@ -17,6 +17,7 @@ const API_BASE: &str = "https://api.github.com";
 enum Path<'a> {
     Blob(&'a str, &'a str, &'a str, &'a str),
     Commit(&'a str, &'a str, &'a str),
+    Compare(&'a str, &'a str, &'a str),
     Issue(&'a str, &'a str, &'a str),
     PullRequest(&'a str, &'a str, &'a str),
     Raw(&'a Url),
@@ -57,6 +58,12 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
                 .split_once('.')
                 .map_or(path_segments[3], |(c, _)| c),
         )
+    } else if path_segments.len() == 4 && path_segments[2] == "compare" {
+        let mut basehead = path_segments[3];
+        if let Some((extention_index, _)) = basehead.match_indices('.').nth(3) {
+            basehead = &basehead[..extention_index];
+        }
+        Path::Compare(path_segments[0], path_segments[1], basehead)
     } else if path_segments.len() == 4 && path_segments[2] == "issues" {
         Path::Issue(path_segments[0], path_segments[1], path_segments[3])
     } else if path_segments.len() == 4 && path_segments[2] == "pull" {
@@ -92,6 +99,13 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
             agent,
             &Url::parse(&format!(
                 "https://github.com/{owner}/{repo_name}/commit/{commit_hash}.patch"
+            ))
+            .expect("URL is valid"),
+        ),
+        Path::Compare(owner, repo_name, basehead) => process_generic(
+            agent,
+            &Url::parse(&format!(
+                "https://github.com/{owner}/{repo_name}/compare/{basehead}.patch"
             ))
             .expect("URL is valid"),
         ),
@@ -260,6 +274,16 @@ mod tests {
                 "bar",
                 "06c106c106c106c106c106c106c106c106c106c1"
             ))
+        ),
+        (
+            compare,
+            "/foo/bar/compare/06c106c106c1...c106c106c106",
+            Some(Path::Compare("foo", "bar", "06c106c106c1...c106c106c106"))
+        ),
+        (
+            compare_patch,
+            "/foo/bar/compare/06c106c106c1...c106c106c106.patch",
+            Some(Path::Compare("foo", "bar", "06c106c106c1...c106c106c106"))
         ),
         (
             issue,
