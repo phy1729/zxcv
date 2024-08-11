@@ -164,51 +164,13 @@ pub fn show_url(config: &Config, url: &str) -> anyhow::Result<()> {
 fn get_content(url: &mut Url) -> anyhow::Result<Content> {
     let agent = Agent::new();
 
+    if rewrite_url(url) {
+        return process_generic(&agent, url);
+    };
+
     Ok(if let Some(hostname) = url.host_str() {
         match hostname {
-            "bpa.st" => {
-                if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
-                    url.set_path(&(url.path().to_owned() + "/raw"));
-                };
-                process_generic(&agent, url)?
-            }
-
             "bsky.app" => bsky::process(&agent, url)?,
-
-            "p.dav1d.de" => {
-                if let Some((raw_path, _)) = url.path().rsplit_once('.') {
-                    #[allow(clippy::unnecessary_to_owned)]
-                    url.set_path(&raw_path.to_owned());
-                }
-                process_generic(&agent, url)?
-            }
-
-            "paste.debian.net" => {
-                if !url.path().starts_with("/plain") {
-                    url.path_segments_mut()
-                        .expect("URL is not cannot-be-a-base")
-                        .pop_if_empty();
-                    let Some(id) = url.path_segments().and_then(Iterator::last) else {
-                        bail!("Unknown Debian paste URL");
-                    };
-                    url.set_path(&format!("/plain/{id}"));
-                }
-                process_generic(&agent, url)?
-            }
-
-            "dpaste.com" => {
-                if !url.path().ends_with(".txt") {
-                    url.set_path(&(url.path().to_owned() + ".txt"));
-                };
-                process_generic(&agent, url)?
-            }
-
-            "dpaste.org" => {
-                if !url.path().ends_with("/raw") {
-                    url.set_path(&(url.path().to_owned() + "/raw"));
-                };
-                process_generic(&agent, url)?
-            }
 
             "github.com" => github::process(&agent, url)?,
 
@@ -216,31 +178,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
 
             "ibb.co" => image_via_selector(&agent, url, "#image-viewer-container > img")?,
 
-            "datatracker.ietf.org" => {
-                if let Some(id) = url.path().strip_prefix("/doc/html/") {
-                    process_generic(
-                        &agent,
-                        &Url::parse(&format!("https://www.ietf.org/archive/id/{id}.txt"))
-                            .expect("URL is valid"),
-                    )?
-                } else {
-                    bail!("Unknown IETF URL");
-                }
-            }
-
             "lobste.rs" => lobsters::process(&agent, url)?,
-
-            "marc.info" => {
-                url.query_pairs_mut().append_pair("q", "mbox");
-                process_generic(&agent, url)?
-            }
-
-            "paste.mozilla.org" | "pastebin.mozilla.org" => {
-                if !url.path().ends_with("/raw") {
-                    url.set_path(&(url.path().to_owned() + "/raw"));
-                };
-                process_generic(&agent, url)?
-            }
 
             "mypy-play.net" => {
                 let gist_id = url
@@ -249,13 +187,6 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                     .with_context(|| "Mypy playground URL missing gist param")?
                     .1;
                 github::gist::process_by_id(&agent, &gist_id)?
-            }
-
-            "pastebin.com" => {
-                if !url.path().starts_with("/raw") {
-                    url.set_path(&("/raw".to_owned() + url.path()));
-                }
-                process_generic(&agent, url)?
             }
 
             "play.integer32.com" | "play.rust-lang.org" => {
@@ -285,6 +216,80 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
     } else {
         process_generic(&agent, url)?
     })
+}
+
+fn rewrite_url(url: &mut Url) -> bool {
+    let Some(hostname) = url.host_str() else {
+        return false;
+    };
+
+    #[allow(clippy::match_same_arms)]
+    match hostname {
+        "bpa.st" => {
+            if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
+                url.set_path(&(url.path().to_owned() + "/raw"));
+            };
+        }
+
+        "p.dav1d.de" => {
+            if let Some((raw_path, _)) = url.path().rsplit_once('.') {
+                #[allow(clippy::unnecessary_to_owned)]
+                url.set_path(&raw_path.to_owned());
+            }
+        }
+
+        "paste.debian.net" => {
+            if !url.path().starts_with("/plain") {
+                url.path_segments_mut()
+                    .expect("URL is not cannot-be-a-base")
+                    .pop_if_empty();
+                let Some(id) = url.path_segments().and_then(Iterator::last) else {
+                    return false;
+                };
+                url.set_path(&format!("/plain/{id}"));
+            }
+        }
+
+        "dpaste.com" => {
+            if !url.path().ends_with(".txt") {
+                url.set_path(&(url.path().to_owned() + ".txt"));
+            };
+        }
+
+        "dpaste.org" => {
+            if !url.path().ends_with("/raw") {
+                url.set_path(&(url.path().to_owned() + "/raw"));
+            };
+        }
+
+        "datatracker.ietf.org" => {
+            if let Some(id) = url.path().strip_prefix("/doc/html/") {
+                url.set_path(&format!("/archive/id/{id}.txt"));
+                url.set_host(Some("www.ietf.org"))
+                    .expect("hostname is valid");
+            } else {
+                return false;
+            }
+        }
+
+        "marc.info" => {
+            url.query_pairs_mut().append_pair("q", "mbox");
+        }
+
+        "paste.mozilla.org" | "pastebin.mozilla.org" => {
+            if !url.path().ends_with("/raw") {
+                url.set_path(&(url.path().to_owned() + "/raw"));
+            };
+        }
+
+        "pastebin.com" => {
+            if !url.path().starts_with("/raw") {
+                url.set_path(&("/raw".to_owned() + url.path()));
+            }
+        }
+        _ => return false,
+    };
+    true
 }
 
 fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
