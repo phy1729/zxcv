@@ -496,3 +496,97 @@ fn read_raw_response(response: ureq::Response) -> io::Result<Vec<u8>> {
         .read_to_end(&mut body)?;
     Ok(body)
 }
+
+#[cfg(test)]
+mod tests {
+    use url::Url;
+
+    use super::rewrite_url;
+
+    macro_rules! rewrite_tests {
+        ($(($name: ident, $url: expr, $expected: expr),)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    rewrite_test($url, $expected);
+                }
+            )*
+        }
+    }
+
+    fn rewrite_test(url: &str, expected: &str) {
+        let mut url = Url::parse(url).unwrap();
+        let expected = Url::parse(expected).unwrap();
+
+        assert!(rewrite_url(&mut url));
+        assert_eq!(url, expected);
+        assert!(rewrite_url(&mut url));
+        assert_eq!(url, expected);
+    }
+
+    rewrite_tests!(
+        (
+            bpa_st,
+            "https://bpa.st/example",
+            "https://bpa.st/example/raw"
+        ),
+        (
+            bpa_st_pre_raw,
+            "https://bpa.st/raw/example",
+            "https://bpa.st/raw/example"
+        ),
+        (
+            dav1d_de,
+            "https://p.dav1d.de/example.rs",
+            "https://p.dav1d.de/example"
+        ),
+        (
+            paste_debian_net,
+            "https://paste.debian.net/1729/",
+            "https://paste.debian.net/plain/1729"
+        ),
+        (
+            dpaste_com,
+            "https://dpaste.com/example",
+            "https://dpaste.com/example.txt"
+        ),
+        (
+            dpaste_org,
+            "https://dpaste.org/example",
+            "https://dpaste.org/example/raw"
+        ),
+        (
+            marc_info,
+            "https://marc.info/?l=example&m=1729&w=2",
+            "https://marc.info/?l=example&m=1729&w=2&q=mbox"
+        ),
+        (
+            paste_mozilla_org,
+            "https://paste.mozilla.org/example",
+            "https://paste.mozilla.org/example/raw"
+        ),
+        (
+            pastebin_com,
+            "https://pastebin.com/example",
+            "https://pastebin.com/raw/example"
+        ),
+    );
+
+    #[test]
+    fn rewrite_unknown() {
+        let mut url = Url::parse("https://example.com").unwrap();
+        let expected = url.clone();
+
+        assert!(!rewrite_url(&mut url));
+        assert_eq!(url, expected);
+    }
+
+    #[test]
+    fn rewrite_ip() {
+        let mut url = Url::parse("https://192.0.2.17/example").unwrap();
+        let expected = url.clone();
+
+        assert!(!rewrite_url(&mut url));
+        assert_eq!(url, expected);
+    }
+}
