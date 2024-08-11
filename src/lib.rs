@@ -273,6 +273,14 @@ fn rewrite_url(url: &mut Url) -> bool {
         }
 
         "marc.info" => {
+            if url.query_pairs().any(|(k, _)| k == "q") {
+                let pairs: Vec<_> = url
+                    .query_pairs()
+                    .filter(|(k, _)| k != "q")
+                    .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                    .collect();
+                url.query_pairs_mut().clear().extend_pairs(pairs);
+            }
             url.query_pairs_mut().append_pair("q", "mbox");
         }
 
