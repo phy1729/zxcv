@@ -19,7 +19,7 @@ impl State {
     pub fn root_block(&mut self) -> Block<'_> {
         Block {
             state: self,
-            trailing_whitespace: false,
+            pending_whitespace: false,
             prefixes: None,
             must_emit: false,
             in_code: false,
@@ -37,7 +37,7 @@ impl State {
 #[derive(Debug)]
 pub(super) struct Block<'s> {
     state: &'s mut State,
-    trailing_whitespace: bool,
+    pending_whitespace: bool,
     prefixes: Option<(&'s str, &'s str, String)>,
     must_emit: bool,
     in_code: bool,
@@ -84,10 +84,10 @@ impl<'s> Block<'s> {
 
     fn push_inner(&mut self, s: &str, raw: bool) {
         if s.chars().all(is_whitespace) {
-            self.trailing_whitespace |= !s.is_empty();
+            self.pending_whitespace |= !s.is_empty();
         } else {
             let initial_whitespace = s.chars().next().map(is_whitespace) == Some(true);
-            if (self.trailing_whitespace || initial_whitespace)
+            if (self.pending_whitespace || initial_whitespace)
                 && !(self.state.pending.is_empty() || self.state.pending.ends_with('\n'))
             {
                 self.state.pending.push(' ');
@@ -103,13 +103,13 @@ impl<'s> Block<'s> {
                     .extend(EscapeMarkdown::new(SqueezeWhitespace::new(s.chars())));
             }
 
-            self.trailing_whitespace = s.chars().last().map(is_whitespace) == Some(true);
+            self.pending_whitespace = s.chars().last().map(is_whitespace) == Some(true);
         }
     }
 
     pub fn newline(&mut self) {
         self.state.pending.push('\n');
-        self.trailing_whitespace = false;
+        self.pending_whitespace = false;
     }
 
     fn push_pending(&mut self, drop: bool) {
@@ -130,7 +130,7 @@ impl<'s> Block<'s> {
                 .subsequent_indent(&self.state.subsequent_prefix),
             ));
             self.state.pending.clear();
-            self.trailing_whitespace = false;
+            self.pending_whitespace = false;
         } else if drop && self.must_emit && self.state.gap_prefix_offset != 0 {
             self.push_gap();
             self.state
@@ -165,7 +165,7 @@ impl<'s> Block<'s> {
         self.push_pending(false);
         Block {
             state: self.state,
-            trailing_whitespace: false,
+            pending_whitespace: false,
             prefixes: None,
             must_emit: false,
             in_code: self.in_code,
