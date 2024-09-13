@@ -21,6 +21,7 @@ impl State {
             state: self,
             pending_whitespace: false,
             prefixes: None,
+            pending_raw_start: None,
             must_emit: false,
             in_code: false,
             in_item: false,
@@ -39,6 +40,7 @@ pub(super) struct Block<'s> {
     state: &'s mut State,
     pending_whitespace: bool,
     prefixes: Option<(&'s str, &'s str, String)>,
+    pending_raw_start: Option<&'static str>,
     must_emit: bool,
     in_code: bool,
     in_item: bool,
@@ -81,6 +83,11 @@ impl<'s> Block<'s> {
             self.state.pending.push(' ');
             self.pending_whitespace = false;
         }
+
+        if let Some(pending_raw_start) = self.pending_raw_start {
+            self.state.pending.push_str(pending_raw_start);
+            self.pending_raw_start = None;
+        }
     }
 
     pub fn push(&mut self, s: &str) {
@@ -105,6 +112,18 @@ impl<'s> Block<'s> {
     pub fn push_raw(&mut self, s: &str) {
         self.pre_push();
         self.state.pending.push_str(s);
+    }
+
+    pub fn push_raw_start(&mut self, s: &'static str) {
+        self.pending_raw_start = Some(s);
+    }
+
+    pub fn push_raw_end(&mut self, s: &str) {
+        if self.pending_raw_start.is_some() {
+            self.pending_raw_start = None;
+        } else {
+            self.state.pending.push_str(s);
+        }
     }
 
     pub fn newline(&mut self) {
@@ -167,6 +186,7 @@ impl<'s> Block<'s> {
             state: self.state,
             pending_whitespace: false,
             prefixes: None,
+            pending_raw_start: None,
             must_emit: false,
             in_code: self.in_code,
             in_item,

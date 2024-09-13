@@ -107,10 +107,10 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             }
 
             "b" | "strong" => {
-                block.push_raw("**");
+                block.push_raw_start("**");
                 node.children()
                     .for_each(|node| render_node_inner(node, url, block));
-                block.push_raw("**");
+                block.push_raw_end("**");
             }
 
             "blockquote" => {
@@ -123,12 +123,12 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             "br" => block.newline(),
 
             "code" => {
-                block.push_raw("`");
+                block.push_raw_start("`");
                 block.start_code();
                 node.children()
                     .for_each(|node| render_node_inner(node, url, block));
                 block.end_code();
-                block.push_raw("`");
+                block.push_raw_end("`");
             }
 
             "div" | "p" => {
@@ -138,10 +138,10 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             }
 
             "em" | "i" => {
-                block.push_raw("_");
+                block.push_raw_start("_");
                 node.children()
                     .for_each(|node| render_node_inner(node, url, block));
-                block.push_raw("_");
+                block.push_raw_end("_");
             }
 
             "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
@@ -303,6 +303,9 @@ mod tests {
         (link_anchor, "<a href=\"#somewhere\">text</a>", "[text](https://example.com/#somewhere)"),
         (link_anchor_useless, "<h3>header <a href=\"#somewhere\">#</a></h3>", "### header"),
         (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
+        (strong_leading_space, "foo<strong> bar</strong> baz", "foo **bar** baz"),
+        (strong_trailing_space, "foo <strong>bar </strong>baz", "foo **bar** baz"),
+        (strong_empty, "foo <strong> </strong>baz", "foo baz"),
         (blockquote, "<blockquote>foo</blockquote>", "> foo"),
         (blockquote_empty, "<blockquote></blockquote>", ""),
         (blockquote_over_ps, "before <blockquote>\n<p>foo</p><p>bar</p>\n</blockquote> after", "before\n\n> foo\n>\n> bar\n\nafter"),
@@ -314,10 +317,16 @@ mod tests {
         (br_space, "foo<br> bar", "foo\nbar"),
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
         (code, "foo <code>bar</code> baz", "foo `bar` baz"),
+        (code_leading_space, "foo<code> bar</code> baz", "foo `bar` baz"),
+        (code_trailing_space, "foo <code>bar </code>baz", "foo `bar` baz"),
+        (code_empty, "foo <code> </code>baz", "foo baz"),
         (code_literals, "<code>*_foo</code>bar*", "`*_foo`bar\\*"),
         (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
         (p, "<p>foo</p><p>bar</p>", "foo\n\nbar"),
         (em, "foo <em>bar</em> baz", "foo _bar_ baz"),
+        (em_leading_space, "foo<em> bar</em> baz", "foo _bar_ baz"),
+        (em_trailing_space, "foo <em>bar </em>baz", "foo _bar_ baz"),
+        (em_empty, "foo <em> </em>baz", "foo baz"),
         (header_h1, "<h1>header</h1>", "header\n======"),
         (header_h1_long, "<h1>header header header header header header header header header header header header</h1>", "header header header header header header header header header header header\nheader\n================================================================================"),
         (header_ignore_empty, "<h1></h1>", ""),
