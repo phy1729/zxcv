@@ -74,28 +74,23 @@ impl<'s> Block<'s> {
         self.in_code = false;
     }
 
+    fn pre_push(&mut self) {
+        if self.pending_whitespace
+            && !(self.state.pending.is_empty() || self.state.pending.ends_with('\n'))
+        {
+            self.state.pending.push(' ');
+            self.pending_whitespace = false;
+        }
+    }
+
     pub fn push(&mut self, s: &str) {
-        self.push_inner(s, false);
-    }
-
-    pub fn push_raw(&mut self, s: &str) {
-        self.push_inner(s, true);
-    }
-
-    fn push_inner(&mut self, s: &str, raw: bool) {
         if s.chars().all(is_whitespace) {
             self.pending_whitespace |= !s.is_empty();
         } else {
-            let initial_whitespace = s.chars().next().map(is_whitespace) == Some(true);
-            if (self.pending_whitespace || initial_whitespace)
-                && !(self.state.pending.is_empty() || self.state.pending.ends_with('\n'))
-            {
-                self.state.pending.push(' ');
-            }
+            self.pending_whitespace |= s.chars().next().map(is_whitespace) == Some(true);
+            self.pre_push();
 
-            if raw {
-                self.state.pending.push_str(s.trim());
-            } else if self.in_code {
+            if self.in_code {
                 self.state.pending.extend(SqueezeWhitespace::new(s.chars()));
             } else {
                 self.state
@@ -105,6 +100,11 @@ impl<'s> Block<'s> {
 
             self.pending_whitespace = s.chars().last().map(is_whitespace) == Some(true);
         }
+    }
+
+    pub fn push_raw(&mut self, s: &str) {
+        self.pre_push();
+        self.state.pending.push_str(s);
     }
 
     pub fn newline(&mut self) {
