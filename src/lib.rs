@@ -44,7 +44,6 @@ use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Context;
 use scraper::Html;
-use scraper::Node;
 use tempfile::NamedTempFile;
 use ureq::Agent;
 use ureq::AgentBuilder;
@@ -337,7 +336,6 @@ fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content
         mastodon::process,
         nextcloud::process,
         process_main_text,
-        process_single_video,
         process_body,
     ] {
         if let Some(result) = process(agent, url, tree) {
@@ -375,35 +373,6 @@ fn process_article_selectors(
             .unwrap_or_default(),
         body: html::render_node(*element, url),
     }))))
-}
-
-fn process_single_video(_: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
-    let video = html::select_single_element(tree, "video")?;
-
-    Some((|| {
-        if let Some(src) = video.attr("src") {
-            return Ok(Content::Video(url.join(src)?));
-        }
-
-        for child in video.children() {
-            if let Node::Element(element) = child.value() {
-                if element.name() == "source" {
-                    if !matches!(
-                        element
-                            .attr("type")
-                            .map(|t| t.split_once(';').map_or(t, |t| t.0)),
-                        Some("video/mp4")
-                    ) {
-                        continue;
-                    }
-                    if let Some(src) = element.attr("src") {
-                        return Ok(Content::Video(url.join(src)?));
-                    }
-                }
-            }
-        }
-        bail!("No supported video formats");
-    })())
 }
 
 /// Display the image specfied by `selector`.
