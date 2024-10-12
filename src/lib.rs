@@ -67,6 +67,7 @@ mod wikimedia;
 const LINE_LENGTH: usize = 80;
 
 enum Content {
+    Audio(Url),
     Image(Box<dyn Read>),
     Pdf(Box<dyn Read>),
     Text(TextType),
@@ -312,6 +313,7 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
 
     Ok(match content_type {
         "application/pdf" => Content::Pdf(response.into_reader()),
+        "audio/mpeg" => Content::Audio(final_url),
         "image/gif" | "image/jpeg" | "image/png" | "image/svg+xml" => {
             Content::Image(response.into_reader())
         }
@@ -399,6 +401,8 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
 
     // replacements are documented with Config.
     let (file, mut replacements): (Option<NamedTempFile>, HashMap<char, OsString>) = match content {
+        Content::Audio(url) | Content::Video(url) => (None, [('u', url.as_str().into())].into()),
+
         Content::Image(ref mut reader) | Content::Pdf(ref mut reader) => {
             let mut file = NamedTempFile::new()?;
             io::copy(reader, &mut file)?;
@@ -423,8 +427,6 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
             }
             (Some(file), [('p', pager.into())].into())
         }
-
-        Content::Video(url) => (None, [('u', url.as_str().into())].into()),
     };
 
     if let Some(file) = &file {
