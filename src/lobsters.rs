@@ -16,6 +16,9 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
     }
 
     if !url.path().ends_with(".json") {
+        url.path_segments_mut()
+            .expect("cannot_be_a_base is checked earlier")
+            .pop_if_empty();
         url.set_path(&(url.path().to_owned() + ".json"));
     }
 
