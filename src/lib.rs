@@ -47,6 +47,7 @@ use scraper::Html;
 use scraper::Node;
 use tempfile::NamedTempFile;
 use ureq::Agent;
+use ureq::AgentBuilder;
 use url::Url;
 
 mod config;
@@ -161,7 +162,9 @@ pub fn show_url(config: &Config, url: &str) -> anyhow::Result<()> {
 
 #[allow(clippy::too_many_lines)]
 fn get_content(url: &mut Url) -> anyhow::Result<Content> {
-    let agent = Agent::new();
+    let agent = AgentBuilder::new()
+        .user_agent(&format!("zxcv/{}", env!("CARGO_PKG_VERSION")))
+        .build();
 
     if rewrite_url(url) {
         return process_generic(&agent, url);
