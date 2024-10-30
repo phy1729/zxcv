@@ -201,6 +201,8 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
                 github::gist::process_by_id(&agent, &gist_id)?
             }
 
+            "soundcloud.com" | "m.soundcloud.com" => Content::Audio(url.clone()),
+
             "twitch.tv" => Content::Video(url.clone()),
 
             "en.wikipedia.org" => wikimedia::process(&agent, url)?,
