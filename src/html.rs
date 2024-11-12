@@ -55,7 +55,7 @@ pub(crate) fn render(html: &str, url: &Url) -> String {
 }
 
 pub(crate) fn render_node(node: NodeRef<'_, Node>, url: &Url) -> String {
-    let mut state = State::default();
+    let mut state = State::new();
     render_node_inner(node, url, &mut state.root_block());
     state.render()
 }
@@ -68,7 +68,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
         Node::Element(e) => match e.name() {
             "a" => {
                 if let Some(link) = e.attr("href") {
-                    let mut sub_state = State::default();
+                    let mut sub_state = State::new();
                     node.children()
                         .fold(&mut sub_state.root_block(), |block, node| {
                             render_node_inner(node, url, block);
@@ -143,7 +143,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             }
 
             "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
-                let mut sub_state = State::default();
+                let mut sub_state = State::new();
                 node.children()
                     .fold(&mut sub_state.root_block(), |block, node| {
                         render_node_inner(node, url, block);

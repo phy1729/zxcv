@@ -6,7 +6,7 @@ use super::squeeze_whitespace::is_whitespace;
 use super::squeeze_whitespace::SqueezeWhitespace;
 use crate::LINE_LENGTH;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(super) struct State {
     result: String,
     pending: String,
@@ -16,6 +16,16 @@ pub(super) struct State {
 }
 
 impl State {
+    pub fn new() -> Self {
+        Self {
+            result: String::new(),
+            pending: String::new(),
+            initial_prefix: String::new(),
+            subsequent_prefix: String::new(),
+            gap_prefix_offset: 0,
+        }
+    }
+
     pub fn root_block(&mut self) -> Block<'_> {
         Block {
             state: self,
