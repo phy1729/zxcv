@@ -1,10 +1,11 @@
+use std::num::NonZeroUsize;
+
 use textwrap::Options;
 use unicode_width::UnicodeWidthStr;
 
 use super::escape_markdown::EscapeMarkdown;
 use super::squeeze_whitespace::is_whitespace;
 use super::squeeze_whitespace::SqueezeWhitespace;
-use crate::LINE_LENGTH;
 
 #[derive(Debug)]
 pub(super) struct State {
@@ -12,16 +13,18 @@ pub(super) struct State {
     pending: String,
     initial_prefix: String,
     subsequent_prefix: String,
+    max_width: Option<NonZeroUsize>,
     gap_prefix_offset: usize,
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new(max_width: Option<NonZeroUsize>) -> Self {
         Self {
             result: String::new(),
             pending: String::new(),
             initial_prefix: String::new(),
             subsequent_prefix: String::new(),
+            max_width,
             gap_prefix_offset: 0,
         }
     }
@@ -57,6 +60,10 @@ pub(super) struct Block<'s> {
 }
 
 impl<'s> Block<'s> {
+    pub fn max_width(&self) -> Option<NonZeroUsize> {
+        self.state.max_width
+    }
+
     pub fn prefix(&mut self, initial_prefix: &'s str, subsequent_prefix: &'s str) {
         debug_assert!(self.prefixes.is_none());
         debug_assert_eq!(initial_prefix.width(), subsequent_prefix.width());
@@ -144,17 +151,29 @@ impl<'s> Block<'s> {
     fn push_pending(&mut self, drop: bool) {
         if !self.state.pending.is_empty() {
             self.push_gap();
-            self.state.result.push_str(&textwrap::fill(
-                &self.state.pending,
-                Options::new(LINE_LENGTH)
-                    .initial_indent(if self.state.gap_prefix_offset == 0 {
+            if let Some(max_width) = self.state.max_width {
+                self.state.result.push_str(&textwrap::fill(
+                    &self.state.pending,
+                    Options::new(max_width.get())
+                        .initial_indent(if self.state.gap_prefix_offset == 0 {
+                            &self.state.subsequent_prefix
+                        } else {
+                            self.state.gap_prefix_offset = 0;
+                            &self.state.initial_prefix
+                        })
+                        .subsequent_indent(&self.state.subsequent_prefix),
+                ));
+            } else {
+                self.state
+                    .result
+                    .push_str(if self.state.gap_prefix_offset == 0 {
                         &self.state.subsequent_prefix
                     } else {
                         self.state.gap_prefix_offset = 0;
                         &self.state.initial_prefix
-                    })
-                    .subsequent_indent(&self.state.subsequent_prefix),
-            ));
+                    });
+                self.state.result.push_str(&self.state.pending);
+            }
             self.state.pending.clear();
             self.pending_whitespace = false;
         } else if drop && self.must_emit && self.state.gap_prefix_offset != 0 {

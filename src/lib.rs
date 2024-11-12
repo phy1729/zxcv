@@ -38,6 +38,7 @@ use std::io::Read;
 use std::io::Write;
 use std::iter;
 use std::iter::Iterator;
+use std::num::NonZeroUsize;
 use std::process::Command;
 
 use anyhow::anyhow;
@@ -375,7 +376,7 @@ fn process_article_selectors(
             .find_map(|t| html::select_single_element(tree, t))
             .map(|e| e.inner_html().trim().to_owned())
             .unwrap_or_default(),
-        body: html::render_node(*element, url),
+        body: html::render_node(*element, url, NonZeroUsize::new(LINE_LENGTH)),
     }))))
 }
 

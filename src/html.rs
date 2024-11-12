@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::num::NonZeroUsize;
 
 use ego_tree::NodeRef;
 use scraper::node::Element;
@@ -8,6 +9,8 @@ use scraper::Node;
 use scraper::Selector;
 use unicode_width::UnicodeWidthStr;
 use url::Url;
+
+use crate::LINE_LENGTH;
 
 mod escape_markdown;
 mod squeeze_whitespace;
@@ -51,11 +54,19 @@ pub(crate) fn select_single_element<'a>(
 }
 
 pub(crate) fn render(html: &str, url: &Url) -> String {
-    render_node(*Html::parse_fragment(html).root_element(), url)
+    render_node(
+        *Html::parse_fragment(html).root_element(),
+        url,
+        NonZeroUsize::new(LINE_LENGTH),
+    )
 }
 
-pub(crate) fn render_node(node: NodeRef<'_, Node>, url: &Url) -> String {
-    let mut state = State::new();
+pub(crate) fn render_node(
+    node: NodeRef<'_, Node>,
+    url: &Url,
+    max_width: Option<NonZeroUsize>,
+) -> String {
+    let mut state = State::new(max_width);
     render_node_inner(node, url, &mut state.root_block());
     state.render()
 }
@@ -68,7 +79,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
         Node::Element(e) => match e.name() {
             "a" => {
                 if let Some(link) = e.attr("href") {
-                    let mut sub_state = State::new();
+                    let mut sub_state = State::new(block.max_width());
                     node.children()
                         .fold(&mut sub_state.root_block(), |block, node| {
                             render_node_inner(node, url, block);
@@ -143,7 +154,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             }
 
             "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
-                let mut sub_state = State::new();
+                let mut sub_state = State::new(block.max_width());
                 node.children()
                     .fold(&mut sub_state.root_block(), |block, node| {
                         render_node_inner(node, url, block);
