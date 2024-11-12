@@ -9,8 +9,6 @@ use scraper::Selector;
 use unicode_width::UnicodeWidthStr;
 use url::Url;
 
-use crate::LINE_LENGTH;
-
 mod escape_markdown;
 mod squeeze_whitespace;
 mod state;
@@ -161,8 +159,13 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                             block.push_raw(&header);
                             block.newline();
                             block.push_raw(
-                                &(if e.name() == "h1" { "=" } else { "-" })
-                                    .repeat(std::cmp::min(header.width(), LINE_LENGTH)),
+                                &(if e.name() == "h1" { "=" } else { "-" }).repeat(
+                                    header
+                                        .split('\n')
+                                        .map(UnicodeWidthStr::width)
+                                        .max()
+                                        .expect("str::split always returns an item"),
+                                ),
                             );
                         }
                         "h3" | "h4" | "h5" | "h6" => {
@@ -328,7 +331,7 @@ mod tests {
         (em_trailing_space, "foo <em>bar </em>baz", "foo _bar_ baz"),
         (em_empty, "foo <em> </em>baz", "foo baz"),
         (header_h1, "<h1>header</h1>", "header\n======"),
-        (header_h1_long, "<h1>header header header header header header header header header header header header</h1>", "header header header header header header header header header header header\nheader\n================================================================================"),
+        (header_h1_long, "<h1>header header header header header header header header header header header header</h1>", "header header header header header header header header header header header\nheader\n============================================================================"),
         (header_unicode, "<h1>\u{1f310}</h1>", "\u{1f310}\n=="),
         (header_ignore_empty, "<h1></h1>", ""),
         (header_escapes, "<h1>foo `bar` baz</h1>", "foo \\`bar\\` baz\n==============="),
