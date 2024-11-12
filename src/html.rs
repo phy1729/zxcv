@@ -332,7 +332,7 @@ mod tests {
         (header_ignore_empty, "<h1></h1>", ""),
         (header_escapes, "<h1>foo `bar` baz</h1>", "foo \\`bar\\` baz\n==============="),
         (header_h2, "<h2>header</h2>", "header\n------"),
-        (header_h3, "<h3>header</h2>", "### header"),
+        (header_h3, "<h3>header</h3>", "### header"),
         (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
         (ol, "<ol><li>foo</li><li>bar</li></ol>", "1. foo\n2. bar"),
