@@ -19,19 +19,19 @@ mod state;
 use self::state::Block;
 use self::state::State;
 
-pub(crate) trait Selectable {
-    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>>;
+pub(crate) trait Selectable<'a> {
+    fn select<'b>(self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>>;
 }
 
-impl Selectable for Html {
-    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>> {
-        self.select(selector)
+impl<'a> Selectable<'a> for &'a Html {
+    fn select<'b>(self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>> {
+        Html::select(self, selector)
     }
 }
 
-impl Selectable for ElementRef<'_> {
-    fn select<'a, 'b>(&'a self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>> {
-        self.select(selector)
+impl<'a> Selectable<'a> for &'a ElementRef<'_> {
+    fn select<'b>(self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>> {
+        ElementRef::select(self, selector)
     }
 }
 
@@ -42,7 +42,7 @@ impl Selectable for ElementRef<'_> {
 ///
 /// It is the caller's responsibility to ensure the `selector` is valid.
 pub(crate) fn select_single_element<'a>(
-    tree: &'a impl Selectable,
+    tree: impl Selectable<'a>,
     selector_string: &str,
 ) -> Option<ElementRef<'a>> {
     let selector = Selector::parse(selector_string).expect("Caller must supply a valid selector");
