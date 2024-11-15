@@ -29,7 +29,7 @@ impl<'a> Selectable<'a> for &'a Html {
     }
 }
 
-impl<'a> Selectable<'a> for &'a ElementRef<'_> {
+impl<'a> Selectable<'a> for &ElementRef<'a> {
     fn select<'b>(self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>> {
         ElementRef::select(self, selector)
     }
