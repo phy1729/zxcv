@@ -136,17 +136,14 @@ impl<'s> Block<'s> {
             self.push_gap();
             self.state.result.push_str(&textwrap::fill(
                 &self.state.pending,
-                Options::new(std::cmp::max(
-                    LINE_LENGTH,
-                    self.state.initial_prefix.len() + 20,
-                ))
-                .initial_indent(if self.state.gap_prefix_offset == 0 {
-                    &self.state.subsequent_prefix
-                } else {
-                    self.state.gap_prefix_offset = 0;
-                    &self.state.initial_prefix
-                })
-                .subsequent_indent(&self.state.subsequent_prefix),
+                Options::new(LINE_LENGTH)
+                    .initial_indent(if self.state.gap_prefix_offset == 0 {
+                        &self.state.subsequent_prefix
+                    } else {
+                        self.state.gap_prefix_offset = 0;
+                        &self.state.initial_prefix
+                    })
+                    .subsequent_indent(&self.state.subsequent_prefix),
             ));
             self.state.pending.clear();
             self.pending_whitespace = false;
