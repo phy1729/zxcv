@@ -15,9 +15,11 @@ use crate::LINE_LENGTH;
 mod escape_markdown;
 mod squeeze_whitespace;
 mod state;
+mod table;
 
 use self::state::Block;
 use self::state::State;
+use self::table::render_table;
 
 pub(crate) trait Selectable<'a> {
     fn select<'b>(self, selector: &'b Selector) -> impl Iterator<Item = ElementRef<'a>>;
@@ -257,6 +259,12 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 block.push("```");
             }
 
+            "table" => {
+                let mut block = block.new_raw_block();
+                let table = ElementRef::wrap(node).expect("Node is Node::Element");
+                block.push(&render_table(table, url, block.max_width()));
+            }
+
             "ul" => {
                 let mut block = block.new_block();
                 node.children()
@@ -362,6 +370,7 @@ mod tests {
         (pre_language, "<pre><code class=\"language-foo bar\">foo\n    bar\n</code></pre>", "```foo\nfoo\n    bar\n```"),
         (pre_br, "<pre>foo<br>bar</pre>", "```\nfoo\nbar\n```"),
         (pre_br_twice, "<blockquote><pre>foo<br><br>bar</pre></blockquote>", "> ```\n> foo\n>\n> bar\n> ```"),
+        (table, "<table><tr><td>1a</td><td>1b</td></tr><tr><td>2a</td><td>2b</td></tr></table>", "1a | 1b\n2a | 2b"),
         (ul, "<ul><li>foo</li><li>bar</li></ul>", "* foo\n* bar"),
         (ul_empty_item, "<ul><li>foo</li><li><li>bar</li></ul>", "* foo\n*\n* bar"),
         (ul_nested, "<ul><li>foo</li><li><ul><li>bar</li><li>baz</li></ul></li><li>quux</li></ul>", "* foo\n* * bar\n  * baz\n* quux"),

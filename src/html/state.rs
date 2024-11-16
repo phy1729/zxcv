@@ -257,6 +257,10 @@ pub(super) struct RawBlock<'s> {
 }
 
 impl<'s> RawBlock<'s> {
+    pub fn max_width(&self) -> Option<NonZeroUsize> {
+        self.state.max_width
+    }
+
     pub fn push(&mut self, s: &str) {
         for line in s.split_inclusive('\n') {
             self.handle_prefix(line == "\n");
