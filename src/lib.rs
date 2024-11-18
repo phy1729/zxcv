@@ -43,7 +43,6 @@ use std::process::Command;
 
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Context;
 use scraper::Html;
 use tempfile::NamedTempFile;
 use ureq::Agent;
@@ -171,59 +170,11 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
         return process_generic(&agent, url);
     };
 
-    Ok(if let Some(hostname) = url.host_str() {
-        #[allow(clippy::match_same_arms)]
-        match hostname {
-            "bsky.app" => bsky::process(&agent, url)?,
+    if let Some(content) = process_specific(&agent, url) {
+        return content;
+    }
 
-            "github.com" => github::process(&agent, url)?,
-
-            "gist.github.com" => github::gist::process(&agent, url)?,
-
-            "ibb.co" => image_via_selector(&agent, url, "#image-viewer-container > img")?,
-
-            "lobste.rs" => lobsters::process(&agent, url)?,
-
-            "mypy-play.net" => {
-                let gist_id = url
-                    .query_pairs()
-                    .find(|(k, _)| k == "gist")
-                    .with_context(|| "Mypy playground URL missing gist param")?
-                    .1;
-                github::gist::process_by_id(&agent, &gist_id)?
-            }
-
-            "play.integer32.com" | "play.rust-lang.org" => {
-                let gist_id = url
-                    .query_pairs()
-                    .find(|(k, _)| k == "gist")
-                    .with_context(|| "Rust playground URL missing gist param")?
-                    .1;
-                github::gist::process_by_id(&agent, &gist_id)?
-            }
-
-            "soundcloud.com" | "m.soundcloud.com" => Content::Audio(url.clone()),
-
-            "twitch.tv" => Content::Video(url.clone()),
-
-            "en.wikipedia.org" => wikimedia::process(&agent, url)?,
-
-            "xkcd.com" => image_via_selector(&agent, url, "#comic > img")?,
-
-            "youtu.be" | "youtube.com" | "m.youtube.com" | "music.youtube.com"
-            | "www.youtube.com" => Content::Video(url.clone()),
-
-            _ => {
-                if let Some(result) = stackoverflow::process(&agent, url) {
-                    return result;
-                }
-
-                process_generic(&agent, url)?
-            }
-        }
-    } else {
-        process_generic(&agent, url)?
-    })
+    process_generic(&agent, url)
 }
 
 fn rewrite_url(url: &mut Url) -> bool {
@@ -306,6 +257,53 @@ fn rewrite_url(url: &mut Url) -> bool {
         _ => return false,
     };
     true
+}
+
+fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
+    let hostname = url.host_str()?;
+
+    #[allow(clippy::match_same_arms)]
+    Some(match hostname {
+        "bsky.app" => bsky::process(agent, url),
+
+        "github.com" => github::process(agent, url),
+
+        "gist.github.com" => github::gist::process(agent, url),
+
+        "ibb.co" => image_via_selector(agent, url, "#image-viewer-container > img"),
+
+        "lobste.rs" => lobsters::process(agent, url),
+
+        "mypy-play.net" => {
+            let gist_pair = url.query_pairs().find(|(k, _)| k == "gist")?;
+            github::gist::process_by_id(agent, &gist_pair.1)
+        }
+
+        "play.integer32.com" | "play.rust-lang.org" => {
+            let gist_pair = url.query_pairs().find(|(k, _)| k == "gist")?;
+            github::gist::process_by_id(agent, &gist_pair.1)
+        }
+
+        "soundcloud.com" | "m.soundcloud.com" => Ok(Content::Audio(url.clone())),
+
+        "twitch.tv" => Ok(Content::Video(url.clone())),
+
+        "en.wikipedia.org" => wikimedia::process(agent, url),
+
+        "xkcd.com" => image_via_selector(agent, url, "#comic > img"),
+
+        "youtu.be" | "youtube.com" | "m.youtube.com" | "music.youtube.com" | "www.youtube.com" => {
+            Ok(Content::Video(url.clone()))
+        }
+
+        _ => {
+            if let Some(result) = stackoverflow::process(agent, url) {
+                return Some(result);
+            }
+
+            return None;
+        }
+    })
 }
 
 fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
