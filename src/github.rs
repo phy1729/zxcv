@@ -87,7 +87,7 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
 pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
     let path = parse_path(url).context("Unknown GitHub URL")?;
 
-    match path {
+    (|| match path {
         Path::Blob(owner, repo_name, filepath, r#ref) => {
             let contents = request_raw(
                 agent,
@@ -162,7 +162,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
             )?;
             Ok(Content::Text(TextType::Raw(readme)))
         }
-    }
+    })()
 }
 
 fn request<T: DeserializeOwned>(agent: &Agent, url: &str) -> anyhow::Result<T> {

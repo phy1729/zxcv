@@ -17,41 +17,43 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
         .and_then(|mut s| s.nth(1))
         .context("Unexpected wikipedia URL format")?;
 
-    let api_url = url.join("/w/api.php")?;
-    let title = percent_encoding::percent_decode_str(raw_title).decode_utf8()?;
-    let response: Response = agent
-        .request_url("GET", &api_url)
-        .query_pairs([
-            ("action", "query"),
-            ("format", "json"),
-            ("titles", &title),
-            ("prop", "revisions"),
-            ("rvprop", "content"),
-            ("rvslots", "main"),
-        ])
-        .call()?
-        .into_json()?;
+    (|| {
+        let api_url = url.join("/w/api.php")?;
+        let title = percent_encoding::percent_decode_str(raw_title).decode_utf8()?;
+        let response: Response = agent
+            .request_url("GET", &api_url)
+            .query_pairs([
+                ("action", "query"),
+                ("format", "json"),
+                ("titles", &title),
+                ("prop", "revisions"),
+                ("rvprop", "content"),
+                ("rvslots", "main"),
+            ])
+            .call()?
+            .into_json()?;
 
-    let mut pages: Vec<_> = response.query.pages.into_values().collect();
-    let Some(mut page) = pages.pop() else {
-        bail!("Unexpected wikimedia pages value {pages:?}");
-    };
+        let mut pages: Vec<_> = response.query.pages.into_values().collect();
+        let Some(mut page) = pages.pop() else {
+            bail!("Unexpected wikimedia pages value {pages:?}");
+        };
 
-    let Some(mut revision) = page.revisions.pop() else {
-        bail!("Unexpected wikimedia revisions {:?}", page.revisions);
-    };
+        let Some(mut revision) = page.revisions.pop() else {
+            bail!("Unexpected wikimedia revisions {:?}", page.revisions);
+        };
 
-    if let Some(slot) = revision.slots.remove("main") {
-        Ok(Content::Text(TextType::Article(Article {
-            title: page.title,
-            body: textwrap::fill(&slot.star, LINE_LENGTH),
-        })))
-    } else {
-        bail!(
-            "Wikimedia revision lacks main slot. {:?}",
-            page.revisions[0].slots
-        );
-    }
+        if let Some(slot) = revision.slots.remove("main") {
+            Ok(Content::Text(TextType::Article(Article {
+                title: page.title,
+                body: textwrap::fill(&slot.star, LINE_LENGTH),
+            })))
+        } else {
+            bail!(
+                "Wikimedia revision lacks main slot. {:?}",
+                page.revisions[0].slots
+            );
+        }
+    })()
 }
 
 #[derive(Debug, Deserialize)]

@@ -18,46 +18,48 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
         bail!("Unknown bsky URL");
     }
 
-    let profile: Profile = agent
-        .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
-        .query("actor", path_segments[1])
-        .call()?
-        .into_json()?;
+    (|| {
+        let profile: Profile = agent
+            .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
+            .query("actor", path_segments[1])
+            .call()?
+            .into_json()?;
 
-    let thread: GetPostThreadResponse = agent
-        .get("https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread")
-        .query(
-            "uri",
-            &format!(
-                "at://{}/app.bsky.feed.post/{}",
-                profile.did, path_segments[3]
-            ),
-        )
-        .call()?
-        .into_json()?;
+        let thread: GetPostThreadResponse = agent
+            .get("https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread")
+            .query(
+                "uri",
+                &format!(
+                    "at://{}/app.bsky.feed.post/{}",
+                    profile.did, path_segments[3]
+                ),
+            )
+            .call()?
+            .into_json()?;
 
-    let mut thread_view = match thread.thread {
-        PostViewEnum::Thread(t) => t,
-        PostViewEnum::NotFound(_) => bail!("Post could not be found"),
-        PostViewEnum::Blocked(_) => bail!("Post was blocked"),
-    };
+        let mut thread_view = match thread.thread {
+            PostViewEnum::Thread(t) => t,
+            PostViewEnum::NotFound(_) => bail!("Post could not be found"),
+            PostViewEnum::Blocked(_) => bail!("Post was blocked"),
+        };
 
-    let mut parents: Vec<_> = thread_view
-        .take_parents()
-        .map(|p| p.post.render())
-        .collect();
-    parents.reverse();
+        let mut parents: Vec<_> = thread_view
+            .take_parents()
+            .map(|p| p.post.render())
+            .collect();
+        parents.reverse();
 
-    let replies: Vec<_> = thread_view
-        .take_replies()
-        .map(|r| r.post.render())
-        .collect();
+        let replies: Vec<_> = thread_view
+            .take_replies()
+            .map(|r| r.post.render())
+            .collect();
 
-    Ok(Content::Text(TextType::PostThread(PostThread {
-        before: parents,
-        main: thread_view.post.render(),
-        after: replies,
-    })))
+        Ok(Content::Text(TextType::PostThread(PostThread {
+            before: parents,
+            main: thread_view.post.render(),
+            after: replies,
+        })))
+    })()
 }
 
 #[derive(Debug, Deserialize)]
