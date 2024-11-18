@@ -12,13 +12,13 @@ use crate::TextType;
 use crate::LINE_LENGTH;
 
 pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
+    let raw_title = url
+        .path_segments()
+        .and_then(|mut s| s.nth(1))
+        .context("Unexpected wikipedia URL format")?;
+
     let api_url = url.join("/w/api.php")?;
-    let title = percent_encoding::percent_decode_str(
-        url.path_segments()
-            .and_then(|mut s| s.nth(1))
-            .context("Unexpected wikipedia URL format")?,
-    )
-    .decode_utf8()?;
+    let title = percent_encoding::percent_decode_str(raw_title).decode_utf8()?;
     let response: Response = agent
         .request_url("GET", &api_url)
         .query_pairs([
