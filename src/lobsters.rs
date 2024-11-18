@@ -1,6 +1,5 @@
 use std::fmt::Write;
 
-use anyhow::bail;
 use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
@@ -10,12 +9,12 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
-pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
+pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
     if !url.path().starts_with("/s/") {
-        bail!("Unknown lobsters URL");
+        return None;
     }
 
-    (|| {
+    Some((|| {
         if !url.path().ends_with(".json") {
             url.path_segments_mut()
                 .expect("cannot_be_a_base is checked earlier")
@@ -46,7 +45,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
                 })
                 .collect(),
         })))
-    })()
+    })())
 }
 
 #[derive(Debug, Deserialize)]

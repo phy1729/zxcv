@@ -8,17 +8,17 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
-pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
+pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
     let path_segments: Vec<_> = url
         .path_segments()
         .unwrap_or_else(|| "".split('/'))
         .collect();
 
     if path_segments.len() != 4 || path_segments[0] != "profile" || path_segments[2] != "post" {
-        bail!("Unknown bsky URL");
+        return None;
     }
 
-    (|| {
+    Some((|| {
         let profile: Profile = agent
             .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
             .query("actor", path_segments[1])
@@ -59,7 +59,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
             main: thread_view.post.render(),
             after: replies,
         })))
-    })()
+    })())
 }
 
 #[derive(Debug, Deserialize)]

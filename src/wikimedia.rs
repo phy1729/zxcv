@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use anyhow::bail;
-use anyhow::Context;
 use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
@@ -11,13 +10,10 @@ use crate::Content;
 use crate::TextType;
 use crate::LINE_LENGTH;
 
-pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
-    let raw_title = url
-        .path_segments()
-        .and_then(|mut s| s.nth(1))
-        .context("Unexpected wikipedia URL format")?;
+pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
+    let raw_title = url.path_segments().and_then(|mut s| s.nth(1))?;
 
-    (|| {
+    Some((|| {
         let api_url = url.join("/w/api.php")?;
         let title = percent_encoding::percent_decode_str(raw_title).decode_utf8()?;
         let response: Response = agent
@@ -53,7 +49,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
                 page.revisions[0].slots
             );
         }
-    })()
+    })())
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,4 +1,3 @@
-use anyhow::Context;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use ureq::Agent;
@@ -84,10 +83,10 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
     })
 }
 
-pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
-    let path = parse_path(url).context("Unknown GitHub URL")?;
+pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
+    let path = parse_path(url)?;
 
-    (|| match path {
+    Some((|| match path {
         Path::Blob(owner, repo_name, filepath, r#ref) => {
             let contents = request_raw(
                 agent,
@@ -162,7 +161,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> anyhow::Result<Content> {
             )?;
             Ok(Content::Text(TextType::Raw(readme)))
         }
-    })()
+    })())
 }
 
 fn request<T: DeserializeOwned>(agent: &Agent, url: &str) -> anyhow::Result<T> {
@@ -314,7 +313,6 @@ mod tests {
 pub(crate) mod gist {
     use std::collections::HashMap;
 
-    use anyhow::bail;
     use serde::Deserialize;
     use ureq::Agent;
     use url::Url;
@@ -322,11 +320,9 @@ pub(crate) mod gist {
     use crate::Content;
     use crate::TextType;
 
-    pub(crate) fn process(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
-        let Some(gist_id) = url.path_segments().and_then(|mut p| p.nth(1)) else {
-            bail!("Unknown Github Gist URL");
-        };
-        process_by_id(agent, gist_id)
+    pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
+        let gist_id = url.path_segments().and_then(|mut p| p.nth(1))?;
+        Some(process_by_id(agent, gist_id))
     }
 
     pub(crate) fn process_by_id(agent: &Agent, gist_id: &str) -> anyhow::Result<Content> {

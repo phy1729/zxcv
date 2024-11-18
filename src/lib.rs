@@ -263,37 +263,41 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
     let hostname = url.host_str()?;
 
     #[allow(clippy::match_same_arms)]
-    Some(match hostname {
+    match hostname {
         "bsky.app" => bsky::process(agent, url),
 
         "github.com" => github::process(agent, url),
 
         "gist.github.com" => github::gist::process(agent, url),
 
-        "ibb.co" => image_via_selector(agent, url, "#image-viewer-container > img"),
+        "ibb.co" => Some(image_via_selector(
+            agent,
+            url,
+            "#image-viewer-container > img",
+        )),
 
         "lobste.rs" => lobsters::process(agent, url),
 
         "mypy-play.net" => {
             let gist_pair = url.query_pairs().find(|(k, _)| k == "gist")?;
-            github::gist::process_by_id(agent, &gist_pair.1)
+            Some(github::gist::process_by_id(agent, &gist_pair.1))
         }
 
         "play.integer32.com" | "play.rust-lang.org" => {
             let gist_pair = url.query_pairs().find(|(k, _)| k == "gist")?;
-            github::gist::process_by_id(agent, &gist_pair.1)
+            Some(github::gist::process_by_id(agent, &gist_pair.1))
         }
 
-        "soundcloud.com" | "m.soundcloud.com" => Ok(Content::Audio(url.clone())),
+        "soundcloud.com" | "m.soundcloud.com" => Some(Ok(Content::Audio(url.clone()))),
 
-        "twitch.tv" => Ok(Content::Video(url.clone())),
+        "twitch.tv" => Some(Ok(Content::Video(url.clone()))),
 
         "en.wikipedia.org" => wikimedia::process(agent, url),
 
-        "xkcd.com" => image_via_selector(agent, url, "#comic > img"),
+        "xkcd.com" => Some(image_via_selector(agent, url, "#comic > img")),
 
         "youtu.be" | "youtube.com" | "m.youtube.com" | "music.youtube.com" | "www.youtube.com" => {
-            Ok(Content::Video(url.clone()))
+            Some(Ok(Content::Video(url.clone())))
         }
 
         _ => {
@@ -301,9 +305,9 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
                 return Some(result);
             }
 
-            return None;
+            None
         }
-    })
+    }
 }
 
 fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
