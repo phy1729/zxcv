@@ -265,10 +265,12 @@ mod tests {
             let root = tree.root_element();
             assert_eq!(root.value().name(), "html");
             assert_eq!(root.children().count(), 1);
+            let table = root.child_elements().next().unwrap();
+            assert_eq!(table.value().name(), "table");
 
             assert_eq!(
                 render_table(
-                    ElementRef::wrap(*tree.root_element()).expect("node is Node::Element"),
+                    ElementRef::wrap(*table).expect("node is Node::Element"),
                     &Url::parse("https://example.com/").unwrap(),
                     NonZeroUsize::new(80),
                 ),
