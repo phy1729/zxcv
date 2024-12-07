@@ -318,7 +318,7 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
 
     Ok(match content_type {
         "application/pdf" => Content::Pdf(response.into_reader()),
-        "audio/mpeg" => Content::Audio(final_url),
+        "audio/mpeg" | "audio/ogg" => Content::Audio(final_url),
         "image/gif" | "image/jpeg" | "image/png" | "image/svg+xml" => {
             Content::Image(response.into_reader())
         }
