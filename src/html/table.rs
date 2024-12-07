@@ -26,9 +26,9 @@ struct ColumnStat {
 }
 
 fn parse_table(table: ElementRef<'_>) -> Table<'_> {
-    let header = select_single_element(&table, "thead");
-    let body = select_single_element(&table, "tbody");
-    let footer = select_single_element(&table, "tfoot");
+    let header = select_single_element(&table, ":scope > thead");
+    let body = select_single_element(&table, ":scope > tbody");
+    let footer = select_single_element(&table, ":scope > tfoot");
 
     let headers = header
         .map(|h| h.child_elements().count())
@@ -304,6 +304,7 @@ mod tests {
             (header, "<table><thead><tr><td>1</td><td>2</td><td>3</td></tr></thead><tr><td>4</td><td>5</td><td>6</td></tr></table>", "1 | 2 | 3\n==|===|==\n4 | 5 | 6"),
             (footer, "<table><tr><td>1</td><td>2</td><td>3</td></tr><tfoot><tr><td>4</td><td>5</td><td>6</td></tr></tfoot></table>", "1 | 2 | 3\n--|---|--\n4 | 5 | 6"),
             (no_body, "<table><thead><tr><td>1</td><td>2</td><td>3</td></tr></thead><tfoot><tr><td>4</td><td>5</td><td>6</td></tr></tfoot></table>", "1 | 2 | 3\n==|===|==\n--|---|--\n4 | 5 | 6"),
+            (nested, "<table><tr><td><table><tr><td>1</td><td>2</td><td>3</td></tr><tr><td>4</td><td>5</td><td>6</td></tr></table></td></tr></table>", "1 | 2 | 3\n4 | 5 | 6"),
         );
     }
 }
