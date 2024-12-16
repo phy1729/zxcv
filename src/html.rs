@@ -155,7 +155,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 block.push_raw_end("_");
             }
 
-            "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
+            "h1" | "h2" => {
                 let mut sub_state = State::new(block.max_width());
                 node.children()
                     .fold(&mut sub_state.root_block(), |block, node| {
@@ -166,34 +166,41 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
 
                 if !header.is_empty() {
                     let mut block = block.new_block();
-                    match e.name() {
-                        "h1" | "h2" => {
-                            // Already escaped
-                            block.push_raw(&header);
-                            block.newline();
-                            block.push_raw(
-                                &(if e.name() == "h1" { "=" } else { "-" }).repeat(
-                                    header
-                                        .split('\n')
-                                        .map(UnicodeWidthStr::width)
-                                        .max()
-                                        .expect("str::split always returns an item"),
-                                ),
-                            );
-                        }
-                        "h3" | "h4" | "h5" | "h6" => {
-                            block.push_raw(match e.name() {
-                                "h3" => "### ",
-                                "h4" => "#### ",
-                                "h5" => "##### ",
-                                "h6" => "###### ",
-                                _ => unreachable!(),
-                            });
-                            // Already escaped
-                            block.push_raw(&header);
-                        }
+                    // Already escaped
+                    block.push_raw(&header);
+                    block.newline();
+                    block.push_raw(
+                        &(if e.name() == "h1" { "=" } else { "-" }).repeat(
+                            header
+                                .split('\n')
+                                .map(UnicodeWidthStr::width)
+                                .max()
+                                .expect("str::split always returns an item"),
+                        ),
+                    );
+                }
+            }
+
+            "h3" | "h4" | "h5" | "h6" => {
+                let mut sub_state = State::new(block.max_width());
+                node.children()
+                    .fold(&mut sub_state.root_block(), |block, node| {
+                        render_node_inner(node, url, block);
+                        block
+                    });
+                let header = sub_state.render();
+
+                if !header.is_empty() {
+                    let mut block = block.new_block();
+                    block.push_raw(match e.name() {
+                        "h3" => "### ",
+                        "h4" => "#### ",
+                        "h5" => "##### ",
+                        "h6" => "###### ",
                         _ => unreachable!(),
-                    }
+                    });
+                    // Already escaped
+                    block.push_raw(&header);
                 }
             }
 
