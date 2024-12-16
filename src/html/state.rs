@@ -256,7 +256,7 @@ pub(super) struct RawBlock<'s> {
     at_sol: bool,
 }
 
-impl<'s> RawBlock<'s> {
+impl RawBlock<'_> {
     pub fn max_width(&self) -> Option<NonZeroUsize> {
         self.state.max_width
     }
