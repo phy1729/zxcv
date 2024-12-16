@@ -221,16 +221,6 @@ fn rewrite_url(url: &mut Url) -> bool {
             };
         }
 
-        "datatracker.ietf.org" => {
-            if let Some(id) = url.path().strip_prefix("/doc/html/") {
-                url.set_path(&format!("/archive/id/{id}.txt"));
-                url.set_host(Some("www.ietf.org"))
-                    .expect("hostname is valid");
-            } else {
-                return false;
-            }
-        }
-
         "marc.info" => {
             if url.query_pairs().any(|(k, _)| k == "q") {
                 let pairs: Vec<_> = url
