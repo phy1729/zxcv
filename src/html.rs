@@ -182,26 +182,16 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             }
 
             "h3" | "h4" | "h5" | "h6" => {
-                let mut sub_state = State::new(block.max_width());
-                node.children()
-                    .fold(&mut sub_state.root_block(), |block, node| {
-                        render_node_inner(node, url, block);
-                        block
-                    });
-                let header = sub_state.render();
-
-                if !header.is_empty() {
-                    let mut block = block.new_block();
-                    block.push_raw(match e.name() {
-                        "h3" => "### ",
-                        "h4" => "#### ",
-                        "h5" => "##### ",
-                        "h6" => "###### ",
-                        _ => unreachable!(),
-                    });
-                    // Already escaped
-                    block.push_raw(&header);
+                let mut block = block.new_block();
+                match e.name() {
+                    "h3" => block.prefix("### ", "    "),
+                    "h4" => block.prefix("#### ", "     "),
+                    "h5" => block.prefix("##### ", "      "),
+                    "h6" => block.prefix("###### ", "       "),
+                    _ => unreachable!(),
                 }
+                node.children()
+                    .for_each(|node| render_node_inner(node, url, &mut block));
             }
 
             "img" => {
@@ -363,6 +353,8 @@ mod tests {
         (header_escapes, "<h1>foo `bar` baz</h1>", "foo \\`bar\\` baz\n==============="),
         (header_h2, "<h2>header</h2>", "header\n------"),
         (header_h3, "<h3>header</h3>", "### header"),
+        (header_h3_long, "<h3>header header header header header header header header header header header header</h3>", "### header header header header header header header header header header header\n    header"),
+        (header_h3_empty, "<h3></h3>", ""),
         (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
         (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
         (ol, "<ol><li>foo</li><li>bar</li></ol>", "1. foo\n2. bar"),
