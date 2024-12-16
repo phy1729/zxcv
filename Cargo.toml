@@ -12,11 +12,11 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.14"
 base64 = "0.22"
-ego-tree = "0.9.0"
+ego-tree = "0.10"
 getopt = "1"
 percent-encoding = "2.1"
 pledge = "0.4"
-scraper = { version = "0.21", default-features = false }
+scraper = { version = "0.22", default-features = false }
 # Increased for toml
 serde = { version = "1.0.145", features = ["derive"] }
 tempfile = "3"
