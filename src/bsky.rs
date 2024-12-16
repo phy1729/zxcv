@@ -184,6 +184,8 @@ enum Embed {
     Record(EmbedRecord),
     #[serde(rename = "app.bsky.embed.recordWithMedia#view")]
     RecordWithMedia(RecordWithMedia),
+    #[serde(rename = "app.bsky.embed.video#view")]
+    Video(Video),
 }
 
 impl Embed {
@@ -196,6 +198,7 @@ impl Embed {
                 Media::External(e) => vec![e.external.uri],
                 Media::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
             },
+            Self::Video(v) => vec![v.playlist],
         }
     }
 }
@@ -241,4 +244,10 @@ enum Media {
     Images(Images),
     #[serde(rename = "app.bsky.embed.external#view")]
     External(External),
+}
+
+// app.bsky.embed.video#view
+#[derive(Debug, Deserialize)]
+struct Video {
+    playlist: String,
 }
