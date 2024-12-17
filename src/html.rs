@@ -199,12 +199,16 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                     block.push_raw("![");
                     block.push(e.attr("alt").unwrap_or_default());
                     block.push_raw("](");
-                    block.push_raw(
-                        url.join(src)
-                            .map(Into::<String>::into)
-                            .as_deref()
-                            .unwrap_or(src),
-                    );
+                    if src.starts_with("data:") {
+                        block.push_raw("data:...");
+                    } else {
+                        block.push_raw(
+                            url.join(src)
+                                .map(Into::<String>::into)
+                                .as_deref()
+                                .unwrap_or(src),
+                        );
+                    }
                     block.push_raw(")");
                 }
             }
