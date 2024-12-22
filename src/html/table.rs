@@ -178,22 +178,15 @@ pub(super) fn render_table(
             .map(Vec::len)
             .reduce(std::cmp::max)
             .unwrap_or_default();
-        cell_lines
-            .iter()
-            .zip(widths.iter())
-            .zip(iter::successors(Some(""), |_| Some(" | ")))
-            .for_each(|((cell, width), sep)| {
-                let content = cell.first().unwrap_or(&"");
-                // fmt width is in characters; so munge to handle double width characters.
-                let width = width + content.chars().count() - content.width();
-                write!(result, "{sep}{content:width$}").expect("write into String can't fail");
-            });
-        for line in 1..line_count {
-            result.push('\n');
+        for line in 0..line_count {
+            if line != 0 {
+                result.push('\n');
+            }
+            let separator = if line == 0 { " | " } else { "   " };
             cell_lines
                 .iter()
                 .zip(widths.iter())
-                .zip(iter::successors(Some(""), |_| Some("   ")))
+                .zip(iter::successors(Some(""), |_| Some(separator)))
                 .for_each(|((cell, width), sep)| {
                     let content = cell.get(line).unwrap_or(&"");
                     // fmt width is in characters; so munge to handle double width characters.
