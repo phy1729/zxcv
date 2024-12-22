@@ -193,6 +193,7 @@ pub(super) fn render_table(
                     let width = width + content.chars().count() - content.width();
                     write!(result, "{sep}{content:width$}").expect("write into String can't fail");
                 });
+            result.truncate(result.trim_end().len());
         }
 
         if i + 1 == table.headers {
@@ -287,12 +288,12 @@ mod tests {
             (simple, "<table><tr><td>1</td><td>2</td><td>3</td></tr><tr><td>4</td><td>5</td><td>6</td></tr></table>", "1 | 2 | 3\n4 | 5 | 6"),
             (with_space, "<table><tr> <td>1</td> <td>2</td> <td>3</td> </tr><tr><td>4</td><td>5</td><td>6</td></tr></table>", "1 | 2 | 3\n4 | 5 | 6"),
             (one_column, "<table><tr><td>foo</td></tr><tr><td>bar</td></tr><tr><td>baz</td></tr></table>", "foo\nbar\nbaz"),
-            (empty_column, "<table><tr><td>foo</td><td></td><td>bar</td></tr><tr><td>baz</td><td></td><td>quux</td></tr></table>", "foo |  | bar \nbaz |  | quux"),
+            (empty_column, "<table><tr><td>foo</td><td></td><td>bar</td></tr><tr><td>baz</td><td></td><td>quux</td></tr></table>", "foo |  | bar\nbaz |  | quux"),
             (width, "<table><tr><td>abcd</td><td>2</td><td>3</td></tr><tr><td>4</td><td>5</td><td>6</td></tr></table>", "abcd | 2 | 3\n4    | 5 | 6"),
             (unicode_width_zero, "<table><tr><td>foo</td><td>bar</td></tr><tr><td>\u{200d}</td><td>baz</td></tr></table>", "foo | bar\n\u{200d}    | baz"),
             (unicode_width_double, "<table><tr><td>foo</td><td>bar</td></tr><tr><td>\u{1f310}</td><td>baz</td></tr></table>", "foo | bar\n\u{1f310}  | baz"),
-            (long, "<table><tr><td>1234567 10 234567 20 234567 30 234567 40 234567 50 234567 60 234567 70</td><td>foo bar</td><td>baz</td></tr><tr><td>foo</td><td>foo bar</td><td>baz</td></tr></table>", "1234567 10 234567 20 234567 30 234567 40 234567 50 234567 60     | foo bar | baz\n234567 70                                                                       \nfoo                                                              | foo bar | baz"),
-            (newline, "<table><tr><td>foo<br />bar</td><td>baz</td></tr><tr><td>1</td><td>2</td></tr></table>", "foo | baz\nbar      \n1   | 2  "),
+            (long, "<table><tr><td>1234567 10 234567 20 234567 30 234567 40 234567 50 234567 60 234567 70</td><td>foo bar</td><td>baz</td></tr><tr><td>foo</td><td>foo bar</td><td>baz</td></tr></table>", "1234567 10 234567 20 234567 30 234567 40 234567 50 234567 60     | foo bar | baz\n234567 70\nfoo                                                              | foo bar | baz"),
+            (newline, "<table><tr><td>foo<br />bar</td><td>baz</td></tr><tr><td>1</td><td>2</td></tr></table>", "foo | baz\nbar\n1   | 2"),
             (ragged, "<table><tr><td>1</td><td>2</td></tr><tr><td>4</td><td>5</td><td>6</td></tr></table>", "1 | 2\n4 | 5 | 6"),
             (header, "<table><thead><tr><td>1</td><td>2</td><td>3</td></tr></thead><tr><td>4</td><td>5</td><td>6</td></tr></table>", "1 | 2 | 3\n==|===|==\n4 | 5 | 6"),
             (footer, "<table><tr><td>1</td><td>2</td><td>3</td></tr><tfoot><tr><td>4</td><td>5</td><td>6</td></tr></tfoot></table>", "1 | 2 | 3\n--|---|--\n4 | 5 | 6"),
