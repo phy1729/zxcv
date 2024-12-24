@@ -134,11 +134,13 @@ impl<'s> Block<'s> {
         self.pending_raw_start.push(s);
     }
 
-    pub fn push_raw_end(&mut self, s: &str) {
+    pub fn push_raw_end(&mut self, s: &str) -> bool {
         if self.pending_raw_start.is_empty() {
             self.state.pending.push_str(s);
+            true
         } else {
             self.pending_raw_start.pop();
+            false
         }
     }
 

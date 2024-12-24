@@ -107,12 +107,13 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                     };
 
                     if let Some(destination) = destination {
-                        block.push_raw("[");
-                        // Already escaped
-                        block.push_raw(&text);
-                        block.push_raw("](");
-                        block.push_raw(&destination);
-                        block.push_raw(")");
+                        block.push_raw_start("[");
+                        node.children()
+                            .for_each(|node| render_node_inner(node, url, block));
+                        if block.push_raw_end("](") {
+                            block.push_raw_end(&destination);
+                            block.push_raw_end(")");
+                        }
                     }
                 }
             }
@@ -321,6 +322,8 @@ mod tests {
         (whitespace_link, "<span>foo </span><a href=\"/2\">bar</a>", "foo [bar](https://example.com/2)"),
         (link, "<a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
         (link_url_is_raw, "<a href=\"/foo_bar\">baz</a>", "[baz](https://example.com/foo_bar)"),
+        (link_whitespace_pre, "foo<a href=\"foo\"> bar</a> baz", "foo [bar](https://example.com/foo) baz"),
+        (link_whitespace_post, "foo <a href=\"foo\">bar </a>baz", "foo [bar](https://example.com/foo) baz"),
         (link_leading_whitespace, " <a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
         (link_code, "<a href=\"/foo\"><code>bar</code></a>", "[`bar`](https://example.com/foo)"),
         (link_not_code, "<a href=\"/foo\">`bar`</a>", "[\\`bar\\`](https://example.com/foo)"),
