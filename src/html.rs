@@ -321,6 +321,7 @@ mod tests {
         (whitespace_link, "<span>foo </span><a href=\"/2\">bar</a>", "foo [bar](https://example.com/2)"),
         (link, "<a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
         (link_url_is_raw, "<a href=\"/foo_bar\">baz</a>", "[baz](https://example.com/foo_bar)"),
+        (link_leading_whitespace, " <a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
         (link_code, "<a href=\"/foo\"><code>bar</code></a>", "[`bar`](https://example.com/foo)"),
         (link_not_code, "<a href=\"/foo\">`bar`</a>", "[\\`bar\\`](https://example.com/foo)"),
         (link_anchor, "<a href=\"#somewhere\">text</a>", "[text](https://example.com/#somewhere)"),

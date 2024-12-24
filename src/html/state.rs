@@ -94,11 +94,11 @@ impl<'s> Block<'s> {
     }
 
     fn pre_push(&mut self) {
-        if self.pending_whitespace
-            && !(self.state.pending.is_empty() || self.state.pending.ends_with('\n'))
-        {
-            self.state.pending.push(' ');
+        if self.pending_whitespace {
             self.pending_whitespace = false;
+            if !(self.state.pending.is_empty() || self.state.pending.ends_with('\n')) {
+                self.state.pending.push(' ');
+            }
         }
 
         if let Some(pending_raw_start) = self.pending_raw_start {
