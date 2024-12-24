@@ -34,7 +34,7 @@ impl State {
             state: self,
             pending_whitespace: false,
             prefixes: None,
-            pending_raw_start: None,
+            pending_raw_start: vec![],
             must_emit: false,
             in_code: false,
             in_item: false,
@@ -53,7 +53,7 @@ pub(super) struct Block<'s> {
     state: &'s mut State,
     pending_whitespace: bool,
     prefixes: Option<(&'s str, &'s str, String)>,
-    pending_raw_start: Option<&'static str>,
+    pending_raw_start: Vec<&'static str>,
     must_emit: bool,
     in_code: bool,
     in_item: bool,
@@ -101,10 +101,9 @@ impl<'s> Block<'s> {
             }
         }
 
-        if let Some(pending_raw_start) = self.pending_raw_start {
-            self.state.pending.push_str(pending_raw_start);
-            self.pending_raw_start = None;
-        }
+        self.pending_raw_start
+            .drain(..)
+            .for_each(|s| self.state.pending.push_str(s));
     }
 
     pub fn push(&mut self, s: &str) {
@@ -132,14 +131,14 @@ impl<'s> Block<'s> {
     }
 
     pub fn push_raw_start(&mut self, s: &'static str) {
-        self.pending_raw_start = Some(s);
+        self.pending_raw_start.push(s);
     }
 
     pub fn push_raw_end(&mut self, s: &str) {
-        if self.pending_raw_start.is_some() {
-            self.pending_raw_start = None;
-        } else {
+        if self.pending_raw_start.is_empty() {
             self.state.pending.push_str(s);
+        } else {
+            self.pending_raw_start.pop();
         }
     }
 
@@ -212,7 +211,7 @@ impl<'s> Block<'s> {
             state: self.state,
             pending_whitespace: false,
             prefixes: None,
-            pending_raw_start: None,
+            pending_raw_start: vec![],
             must_emit: false,
             in_code: self.in_code,
             in_item,
