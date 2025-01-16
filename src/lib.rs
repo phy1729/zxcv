@@ -262,7 +262,7 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
 
         "gist.github.com" => github::gist::process(agent, url),
 
-        "ibb.co" => Some(image_via_selector(
+        "ibb.co" | "imgbb.com" => Some(image_via_selector(
             agent,
             url,
             "#image-viewer-container > img",
