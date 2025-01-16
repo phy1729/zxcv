@@ -256,6 +256,8 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
     match hostname {
         "bsky.app" => bsky::process(agent, url),
 
+        "giphy.com" => Some(image_via_selector(agent, url, "figure img")),
+
         "github.com" => github::process(agent, url),
 
         "gist.github.com" => github::gist::process(agent, url),
