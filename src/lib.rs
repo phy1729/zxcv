@@ -282,6 +282,8 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
 
         "soundcloud.com" | "m.soundcloud.com" => Some(Ok(Content::Audio(url.clone()))),
 
+        "tenor.com" => Some(image_via_selector(agent, url, ".main-container .Gif > img")),
+
         "twitch.tv" => Some(Ok(Content::Video(url.clone()))),
 
         "en.wikipedia.org" => wikimedia::process(agent, url),
