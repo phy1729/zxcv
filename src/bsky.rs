@@ -23,19 +23,21 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
             .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
             .query("actor", path_segments[1])
             .call()?
-            .into_json()?;
+            .body_mut()
+            .read_json()?;
 
         let thread: GetPostThreadResponse = agent
             .get("https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread")
             .query(
                 "uri",
-                &format!(
+                format!(
                     "at://{}/app.bsky.feed.post/{}",
                     profile.did, path_segments[3]
                 ),
             )
             .call()?
-            .into_json()?;
+            .body_mut()
+            .read_json()?;
 
         let mut thread_view = match thread.thread {
             PostViewEnum::Thread(t) => t,

@@ -63,26 +63,27 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
         match path {
             Path::Commit(owner, repo, sha) => {
                 let response = agent
-                    .request_url(
-                        "GET",
-                        &api_base
+                    .get(
+                        api_base
                             .join(&format!("repos/{owner}/{repo}/git/commits/{sha}.patch"))
-                            .expect("URL is valid"),
+                            .expect("URL is valid")
+                            .as_str(),
                     )
                     .call()?;
                 Ok(Content::Text(TextType::Raw(read_raw_response(response)?)))
             }
             Path::Src(owner, repo, filepath, r#ref) => {
                 let content: ContentsResponse = agent
-                    .request_url(
-                        "GET",
-                        &api_base
+                    .get(
+                        api_base
                             .join(&format!("repos/{owner}/{repo}/contents{filepath}"))
-                            .expect("URL is valid"),
+                            .expect("URL is valid")
+                            .as_str(),
                     )
                     .query("ref", r#ref)
                     .call()?
-                    .into_json()?;
+                    .body_mut()
+                    .read_json()?;
                 if content.r#type == "file" {
                     Ok(Content::Text(TextType::Raw(
                         base64::engine::general_purpose::STANDARD.decode(content.content)?,

@@ -17,7 +17,7 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
         let api_url = url.join("/w/api.php")?;
         let title = percent_encoding::percent_decode_str(raw_title).decode_utf8()?;
         let response: Response = agent
-            .request_url("GET", &api_url)
+            .get(api_url.as_str())
             .query_pairs([
                 ("action", "query"),
                 ("format", "json"),
@@ -27,7 +27,8 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
                 ("rvslots", "main"),
             ])
             .call()?
-            .into_json()?;
+            .body_mut()
+            .read_json()?;
 
         let mut pages: Vec<_> = response.query.pages.into_values().collect();
         let Some(mut page) = pages.pop() else {

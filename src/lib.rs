@@ -46,7 +46,8 @@ use anyhow::bail;
 use scraper::Html;
 use tempfile::NamedTempFile;
 use ureq::Agent;
-use ureq::AgentBuilder;
+use ureq::BodyReader;
+use ureq::ResponseExt;
 use url::Url;
 
 mod config;
@@ -68,8 +69,8 @@ const LINE_LENGTH: usize = 80;
 
 enum Content {
     Audio(Url),
-    Image(Box<dyn Read>),
-    Pdf(Box<dyn Read>),
+    Image(BodyReader<'static>),
+    Pdf(BodyReader<'static>),
     Text(TextType),
     Video(Url),
 }
@@ -162,9 +163,10 @@ pub fn show_url(config: &Config, url: &str) -> anyhow::Result<()> {
 
 #[allow(clippy::too_many_lines)]
 fn get_content(url: &mut Url) -> anyhow::Result<Content> {
-    let agent = AgentBuilder::new()
-        .user_agent(&format!("zxcv/{}", env!("CARGO_PKG_VERSION")))
-        .build();
+    let agent = Agent::config_builder()
+        .user_agent(format!("zxcv/{}", env!("CARGO_PKG_VERSION")))
+        .build()
+        .into();
 
     if rewrite_url(url) {
         return process_generic(&agent, url);
@@ -305,21 +307,27 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
 }
 
 fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
-    let response = agent.request_url("GET", url).call()?;
-    let content_type = response.content_type();
-    let final_url =
-        Url::parse(response.get_url()).expect("ureq internally stores the url as a Url");
+    let mut response = agent.get(url.as_str()).call()?;
+    let Some(content_type) = response
+        .headers()
+        .get("Content-Type")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.split_once(';').map_or(v, |p| p.0))
+    else {
+        bail!("Missing Content-Type header");
+    };
+    let final_url = Url::parse(&response.get_uri().to_string()).expect("A Uri is a valid Url");
 
     Ok(match content_type {
-        "application/pdf" => Content::Pdf(response.into_reader()),
+        "application/pdf" => Content::Pdf(response.into_body().into_reader()),
         "audio/mpeg" | "audio/ogg" => Content::Audio(final_url),
         "image/gif" | "image/jpeg" | "image/png" | "image/svg+xml" => {
-            Content::Image(response.into_reader())
+            Content::Image(response.into_body().into_reader())
         }
         "text/html" => process_html(
             agent,
             &final_url,
-            &Html::parse_document(&response.into_string()?),
+            &Html::parse_document(&response.body_mut().read_to_string()?),
         )?,
         _ if content_type.starts_with("text/") => {
             Content::Text(TextType::Raw(read_raw_response(response)?))
@@ -382,8 +390,8 @@ fn process_article_selectors(
 ///
 /// It is the caller's responsibility to ensure the `selector` is valid.
 fn image_via_selector(agent: &Agent, url: &Url, selector: &str) -> anyhow::Result<Content> {
-    let response = agent.request_url("GET", url).call()?;
-    let tree = Html::parse_document(&response.into_string()?);
+    let mut response = agent.get(url.as_str()).call()?;
+    let tree = Html::parse_document(&response.body_mut().read_to_string()?);
     let Some(img) = html::select_single_element(&tree, selector) else {
         bail!("Expected one image matching selector {selector};");
     };
@@ -458,14 +466,17 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
     }
 }
 
-fn read_raw_response(response: ureq::Response) -> io::Result<Vec<u8>> {
+fn read_raw_response(response: ureq::http::Response<ureq::Body>) -> io::Result<Vec<u8>> {
     const MAX_RAW_LEN: u32 = 1024 * 1024;
     let capacity = response
-        .header("Content-Length")
+        .headers()
+        .get("Content-Length")
+        .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
     let mut body: Vec<u8> = Vec::with_capacity(std::cmp::min(capacity, MAX_RAW_LEN as usize));
     response
+        .into_body()
         .into_reader()
         .take(u64::from(MAX_RAW_LEN))
         .read_to_end(&mut body)?;

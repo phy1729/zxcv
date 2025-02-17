@@ -167,17 +167,18 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
 fn request<T: DeserializeOwned>(agent: &Agent, url: &str) -> anyhow::Result<T> {
     Ok(agent
         .get(url)
-        .set("Accept", "application/vnd.github+json")
-        .set("X-GitHub-Api-Version", "2022-11-28")
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
         .call()?
-        .into_json()?)
+        .body_mut()
+        .read_json()?)
 }
 
 fn request_raw(agent: &Agent, url: &str) -> anyhow::Result<Vec<u8>> {
     let response = agent
         .get(url)
-        .set("Accept", "application/vnd.github.raw")
-        .set("X-GitHub-Api-Version", "2022-11-28")
+        .header("Accept", "application/vnd.github.raw")
+        .header("X-GitHub-Api-Version", "2022-11-28")
         .call()?;
     Ok(read_raw_response(response)?)
 }

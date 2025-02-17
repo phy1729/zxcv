@@ -39,13 +39,15 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
             .context("Mastodon URL without post id")?;
         let api_base = url.join("/api/v1/statuses/")?;
         let status: Status = agent
-            .request_url("GET", &api_base.join(post_id)?)
+            .get(api_base.join(post_id)?.as_str())
             .call()?
-            .into_json()?;
+            .body_mut()
+            .read_json()?;
         let context: StatusContext = agent
-            .request_url("GET", &api_base.join(&format!("{post_id}/context"))?)
+            .get(api_base.join(&format!("{post_id}/context"))?.as_str())
             .call()?
-            .into_json()?;
+            .body_mut()
+            .read_json()?;
 
         Ok(Content::Text(TextType::PostThread(PostThread {
             before: context

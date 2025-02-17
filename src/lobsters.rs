@@ -22,7 +22,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
             url.set_path(&(url.path().to_owned() + ".json"));
         }
 
-        let story: Story = agent.request_url("GET", url).call()?.into_json()?;
+        let story: Story = agent.get(url.as_str()).call()?.body_mut().read_json()?;
         let mut body = story.title.clone();
         if !story.description_plain.is_empty() {
             write!(body, "\n{}", story.description_plain).expect("write! to String cannot fail");

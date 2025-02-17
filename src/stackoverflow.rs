@@ -410,7 +410,8 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
                     "{API_BASE}answers/{id}?site={site_name}&filter={FILTER}"
                 ))
                 .call()?
-                .into_json()?;
+                .body_mut()
+                .read_json()?;
             let Some(answer) = answers.items.pop() else {
                 bail!("Unexpected answer response: {answers:?}");
             };
@@ -423,7 +424,8 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
                     "{API_BASE}questions/{id}?site={site_name}&filter={FILTER}"
                 ))
                 .call()?
-                .into_json()?;
+                .body_mut()
+                .read_json()?;
             let Some(question) = questions.items.pop() else {
                 bail!("Unexpected question response: {questions:?}");
             };

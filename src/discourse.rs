@@ -27,13 +27,14 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
 
         if path_segments.len() >= 3 && path_segments[0] == "t" {
             let mut topic: Topic = agent
-                .request_url(
-                    "GET",
-                    &url.join(&format!("/t/{}.json", path_segments[2]))
-                        .expect("URL is valid"),
+                .get(
+                    url.join(&format!("/t/{}.json", path_segments[2]))
+                        .expect("URL is valid")
+                        .as_str(),
                 )
                 .call()?
-                .into_json()?;
+                .body_mut()
+                .read_json()?;
 
             Ok(Content::Text(TextType::PostThread(PostThread {
                 before: vec![],
