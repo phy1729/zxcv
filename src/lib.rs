@@ -59,6 +59,7 @@ mod discourse;
 mod gitea;
 mod github;
 mod html;
+mod imgur;
 mod lobsters;
 mod mastodon;
 mod nextcloud;
@@ -295,6 +296,8 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
             url,
             "#image-viewer-container > img",
         )),
+
+        "imgur.com" => imgur::process(agent, url),
 
         "lobste.rs" => lobsters::process(agent, url),
 
