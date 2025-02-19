@@ -18,6 +18,7 @@ use serde::Deserialize;
 /// | Key | Default |
 /// | --- | ------- |
 /// | audio | `["mpv", "--profile=builtin-pseudo-gui", "--", "%u"]` |
+/// | collection | `["xterm", "-e", "%p", "--", "%f"]` |
 /// | image | `["mupdf", "--", "%f"]` |
 /// | pdf | `["mupdf", "--", "%f"]` |
 /// | text | `["xterm", "-e", "%p", "--", "%f"]` |
@@ -29,6 +30,8 @@ use serde::Deserialize;
 /// | Content Type | Flag | Description |
 /// | ------------ | ---- | ----------- |
 /// | Audio | `%u` | URL of the audio. |
+/// | Collection | `%f` | Filename of a temporary file containing links to the items of the collection. |
+/// | Collection | `%p` | Value of the `PAGER` environment variable or an empty string if unset. |
 /// | Image | `%f` | Filename of a temporary file containing the image. |
 /// | PDF | `%f` | Filename of a temporary file containing the PDF. |
 /// | Text | `%f` | Filename of a temporary file containing the text. |
@@ -44,6 +47,7 @@ pub struct Config {
 #[serde(default, deny_unknown_fields)]
 struct Argv {
     audio: Vec<String>,
+    collection: Vec<String>,
     image: Vec<String>,
     pdf: Vec<String>,
     text: Vec<String>,
@@ -54,6 +58,10 @@ impl Default for Argv {
     fn default() -> Self {
         Self {
             audio: ["mpv", "--profile=builtin-pseudo-gui", "--", "%u"]
+                .iter()
+                .map(|&s| s.to_owned())
+                .collect(),
+            collection: ["xterm", "-e", "%p", "--", "%f"]
                 .iter()
                 .map(|&s| s.to_owned())
                 .collect(),
@@ -99,6 +107,7 @@ impl Config {
     pub(crate) fn get_argv(&self, content: &Content) -> &[String] {
         match content {
             Content::Audio(_) => &self.argv.audio,
+            Content::Collection(_) => &self.argv.collection,
             Content::Image(_) => &self.argv.image,
             Content::Pdf(_) => &self.argv.pdf,
             Content::Text(_) => &self.argv.text,

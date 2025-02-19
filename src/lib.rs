@@ -69,10 +69,36 @@ const LINE_LENGTH: usize = 80;
 
 enum Content {
     Audio(Url),
+    Collection(Collection),
     Image(BodyReader<'static>),
     Pdf(BodyReader<'static>),
     Text(TextType),
     Video(Url),
+}
+
+struct Collection {
+    title: Option<String>,
+    items: Vec<Item>,
+}
+
+struct Item {
+    title: Option<String>,
+    url: String,
+}
+
+impl Collection {
+    fn write(&self, writer: &mut impl Write) -> io::Result<()> {
+        if let Some(title) = &self.title {
+            write!(writer, "{title}\n\n")?;
+        }
+        for item in &self.items {
+            if let Some(title) = &item.title {
+                write!(writer, "{title}: ")?;
+            }
+            writeln!(writer, "{}", item.url)?;
+        }
+        Ok(())
+    }
 }
 
 enum TextType {
@@ -405,10 +431,19 @@ fn image_via_selector(agent: &Agent, url: &Url, selector: &str) -> anyhow::Resul
 
 fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
     let argv = config.get_argv(&content);
+    let pager = env::var("PAGER")
+        .unwrap_or_else(|_| "less".to_owned())
+        .into();
 
     // replacements are documented with Config.
     let (file, mut replacements): (Option<NamedTempFile>, HashMap<char, OsString>) = match content {
         Content::Audio(url) | Content::Video(url) => (None, [('u', url.as_str().into())].into()),
+
+        Content::Collection(collection) => {
+            let mut file = NamedTempFile::new()?;
+            collection.write(&mut file)?;
+            (Some(file), [('p', pager)].into())
+        }
 
         Content::Image(ref mut reader) | Content::Pdf(ref mut reader) => {
             let mut file = NamedTempFile::new()?;
@@ -419,9 +454,6 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
         Content::Text(text) => {
             let mut file = NamedTempFile::new()?;
             text.write(&mut file)?;
-            let pager = env::var("PAGER")
-                .unwrap_or_else(|_| "less".to_owned())
-                .into();
             (Some(file), [('p', pager)].into())
         }
     };
