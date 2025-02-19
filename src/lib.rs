@@ -419,20 +419,10 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
         Content::Text(text) => {
             let mut file = NamedTempFile::new()?;
             text.write(&mut file)?;
-            let pager = env::var("PAGER").unwrap_or_else(|_| "less".to_owned());
-            if pager == "less" {
-                env::set_var(
-                    "LESS",
-                    env::var("LESS")
-                        .unwrap_or_else(|_| String::new())
-                        .chars()
-                        .filter(|c| !matches!(c, 'E' | 'e' | 'F'))
-                        // r is unsafe with untrusted input.
-                        .map(|c| if c == 'r' { 'R' } else { c })
-                        .collect::<String>(),
-                );
-            }
-            (Some(file), [('p', pager.into())].into())
+            let pager = env::var("PAGER")
+                .unwrap_or_else(|_| "less".to_owned())
+                .into();
+            (Some(file), [('p', pager)].into())
         }
     };
 
