@@ -318,7 +318,9 @@ pub(crate) mod gist {
     use ureq::Agent;
     use url::Url;
 
+    use crate::Collection;
     use crate::Content;
+    use crate::Item;
     use crate::TextType;
 
     pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
@@ -328,20 +330,34 @@ pub(crate) mod gist {
 
     pub(crate) fn process_by_id(agent: &Agent, gist_id: &str) -> anyhow::Result<Content> {
         let gist: Gist = super::request(agent, &format!("{}/gists/{gist_id}", super::API_BASE))?;
-        if gist.files.len() != 1 {
-            todo!("Handle more than one file in a gist")
+        if gist.files.len() == 1 {
+            let file = gist.files.into_values().next().expect("Checked above");
+            Ok(Content::Text(TextType::Raw(file.content.into())))
+        } else {
+            Ok(Content::Collection(Collection {
+                title: Some(gist.description),
+                items: gist
+                    .files
+                    .into_values()
+                    .map(|file| Item {
+                        title: Some(file.filename),
+                        url: file.raw_url,
+                    })
+                    .collect(),
+            }))
         }
-        let file = gist.files.into_values().next().expect("Checked above");
-        Ok(Content::Text(TextType::Raw(file.content.into())))
     }
 
     #[derive(Debug, Deserialize)]
     struct Gist {
+        description: String,
         files: HashMap<String, File>,
     }
 
     #[derive(Debug, Deserialize)]
     struct File {
         content: String,
+        filename: String,
+        raw_url: String,
     }
 }
