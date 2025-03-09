@@ -18,13 +18,13 @@ getopt = "1"
 # Increased for ureq
 percent-encoding = "2.3.1"
 pledge = "0.4"
-scraper = { version = "0.22", default-features = false }
+scraper = { version = "0.23", default-features = false }
 # Increased for toml and ureq
 serde = { version = "1.0.204", features = ["derive"] }
 tempfile = "3"
 textwrap = "0.16"
 toml = { version = "0.8", default-features = false, features = ["parse"] }
-unicode-width = "0.1.10"
+unicode-width = "0.2"
 ureq = { version = "3", features = ["json"] }
 # Increased for ureq
 url = "2.3.1"
