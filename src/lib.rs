@@ -349,19 +349,19 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
 
     Ok(match content_type {
         "application/pdf" => Content::Pdf(response.into_body().into_reader()),
-        "audio/mpeg" | "audio/ogg" => Content::Audio(final_url),
-        "image/gif" | "image/jpeg" | "image/png" | "image/svg+xml" => {
-            Content::Image(response.into_body().into_reader())
-        }
         "text/html" => process_html(
             agent,
             &final_url,
             &Html::parse_document(&response.body_mut().read_to_string()?),
         )?,
+        _ if content_type.starts_with("audio/") => Content::Audio(final_url),
+        _ if content_type.starts_with("image/") => {
+            Content::Image(response.into_body().into_reader())
+        }
         _ if content_type.starts_with("text/") => {
             Content::Text(TextType::Raw(read_raw_response(response)?))
         }
-        "video/mp4" | "video/quicktime" | "video/webm" => Content::Video(final_url),
+        _ if content_type.starts_with("video/") => Content::Video(final_url),
         _ => bail!("Content type {content_type} is not supported."),
     })
 }
