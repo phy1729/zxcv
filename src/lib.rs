@@ -306,6 +306,8 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
             Some(github::gist::process_by_id(agent, &gist_pair.1))
         }
 
+        "postimg.cc" => Some(image_via_selector(agent, url, "#main-image")),
+
         "play.integer32.com" | "play.rust-lang.org" => {
             let gist_pair = url.query_pairs().find(|(k, _)| k == "gist")?;
             Some(github::gist::process_by_id(agent, &gist_pair.1))
