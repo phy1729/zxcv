@@ -1,3 +1,4 @@
+//! The entrypoint for `zxcv`.
 use std::env;
 
 use anyhow::bail;
