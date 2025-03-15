@@ -8,23 +8,6 @@
 //!
 //! A configuration file may be passed via the `-f` flag. The configuration file is in
 //! [TOML](https://toml.io) format and the accepted sections are documented at [Config].
-#![warn(
-    missing_debug_implementations,
-    missing_docs,
-    unsafe_code,
-    clippy::cargo,
-    clippy::pedantic,
-    clippy::str_to_string,
-    clippy::tests_outside_test_module,
-    clippy::unwrap_used,
-    clippy::use_self,
-    rustdoc::missing_crate_level_docs,
-    rustdoc::unescaped_backticks
-)]
-#![allow(
-    clippy::case_sensitive_file_extension_comparisons,
-    clippy::multiple_crate_versions
-)]
 
 use std::collections::HashMap;
 use std::env;
