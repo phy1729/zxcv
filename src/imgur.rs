@@ -34,7 +34,11 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
     if path_segments.len() == 1 {
         Some(Path::Image(path_segments[0]))
     } else if path_segments.len() == 2 && path_segments[0] == "a" {
-        Some(Path::Album(path_segments[1]))
+        Some(Path::Album(
+            path_segments[1]
+                .rsplit_once('-')
+                .map_or(path_segments[1], |(_, id)| id),
+        ))
     } else if path_segments.len() == 2 && path_segments[0] == "gallery" {
         if let Some((_, hash)) = path_segments[1].rsplit_once('-') {
             Some(Path::Gallery(hash))
