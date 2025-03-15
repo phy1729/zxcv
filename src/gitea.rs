@@ -9,11 +9,14 @@ use url::Url;
 use crate::html;
 use crate::read_raw_response;
 use crate::Content;
+use crate::Post;
+use crate::PostThread;
 use crate::TextType;
 
 #[derive(Debug, PartialEq)]
 enum Path<'a> {
     Commit(&'a str, &'a str, &'a str),
+    Issue(&'a str, &'a str, &'a str),
     Src(&'a str, &'a str, &'a str, &'a str),
 }
 
@@ -26,6 +29,8 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
     Some(
         if path_segments.len() == 4 && path_segments[2] == "commit" {
             Path::Commit(path_segments[0], path_segments[1], path_segments[3])
+        } else if path_segments.len() == 4 && path_segments[2] == "issues" {
+            Path::Issue(path_segments[0], path_segments[1], path_segments[3])
         } else if path_segments.len() >= 6 && path_segments[2] == "src" {
             Path::Src(
                 path_segments[0],
@@ -72,6 +77,37 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
                     .call()?;
                 Ok(Content::Text(TextType::Raw(read_raw_response(response)?)))
             }
+            Path::Issue(owner, repo, index) => {
+                let issue: Issue = agent
+                    .get(
+                        api_base
+                            .join(&format!("repos/{owner}/{repo}/issues/{index}"))
+                            .expect("URL is valid")
+                            .as_str(),
+                    )
+                    .call()?
+                    .body_mut()
+                    .read_json()?;
+                let comments: Vec<Comment> = agent
+                    .get(
+                        api_base
+                            .join(&format!("repos/{owner}/{repo}/issues/{index}/comments"))
+                            .expect("URL is valid")
+                            .as_str(),
+                    )
+                    .call()?
+                    .body_mut()
+                    .read_json()?;
+                Ok(Content::Text(TextType::PostThread(PostThread {
+                    before: vec![],
+                    main: Post {
+                        author: issue.user.login,
+                        body: issue.body,
+                        urls: vec![],
+                    },
+                    after: comments.into_iter().map(Into::into).collect(),
+                })))
+            }
             Path::Src(owner, repo, filepath, r#ref) => {
                 let content: ContentsResponse = agent
                     .get(
@@ -97,9 +133,36 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
 }
 
 #[derive(Debug, Deserialize)]
+struct Comment {
+    body: String,
+    user: User,
+}
+
+impl From<Comment> for Post {
+    fn from(comment: Comment) -> Self {
+        Self {
+            author: comment.user.login,
+            body: comment.body,
+            urls: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 struct ContentsResponse {
     content: String,
     r#type: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Issue {
+    body: String,
+    user: User,
+}
+
+#[derive(Debug, Deserialize)]
+struct User {
+    login: String,
 }
 
 #[cfg(test)]
@@ -131,6 +194,11 @@ mod tests {
                 "bar",
                 "06c106c106c106c106c106c106c106c106c106c1"
             ))
+        ),
+        (
+            issue,
+            "/foo/bar/issues/1729",
+            Some(Path::Issue("foo", "bar", "1729"))
         ),
         (
             src,
