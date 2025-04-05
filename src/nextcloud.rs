@@ -1,4 +1,3 @@
-use anyhow::bail;
 use anyhow::Context;
 use scraper::Html;
 use ureq::Agent;
@@ -16,10 +15,7 @@ pub(crate) fn process(agent: &Agent, _: &Url, tree: &Html) -> Option<anyhow::Res
         return None;
     }
 
-    Some((|| {
-        let Some(download_input) = html::select_single_element(tree, "input#downloadURL") else {
-            bail!("Nextcloud page without downloadURL input");
-        };
+    html::select_single_element(tree, "input#downloadURL").map(|download_input| {
         process_generic(
             agent,
             &Url::parse(
@@ -29,5 +25,5 @@ pub(crate) fn process(agent: &Agent, _: &Url, tree: &Html) -> Option<anyhow::Res
                     .context("downloadURL input missing value")?,
             )?,
         )
-    })())
+    })
 }
