@@ -1389,6 +1389,7 @@ dependencies = [
  "pledge",
  "scraper",
  "serde",
+ "serde_json",
  "tempfile",
  "textwrap",
  "toml",
