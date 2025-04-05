@@ -161,10 +161,25 @@ struct PostView {
 
 impl PostView {
     fn render(self) -> Post {
+        let mut urls: Vec<_> = self
+            .record
+            .facets
+            .into_iter()
+            .flatten()
+            .flat_map(|f| f.features)
+            .filter_map(|f| {
+                if let FaucetFeature::Link(link) = f {
+                    Some(link.uri)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        urls.extend(self.embed.map(Embed::urls).unwrap_or_default());
         Post {
             author: self.author.display_name.unwrap_or(self.author.handle),
             body: self.record.text,
-            urls: self.embed.map(Embed::urls).unwrap_or_default(),
+            urls,
         }
     }
 }
@@ -173,6 +188,32 @@ impl PostView {
 #[derive(Debug, Deserialize)]
 struct BskyPost {
     text: String,
+    facets: Option<Vec<Facet>>,
+}
+
+// app.bsky.richtext.facet
+#[derive(Debug, Deserialize)]
+struct Facet {
+    features: Vec<FaucetFeature>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "$type")]
+enum FaucetFeature {
+    #[serde(rename = "app.bsky.richtext.facet#mention")]
+    Mention(Ignore),
+    #[serde(rename = "app.bsky.richtext.facet#link")]
+    Link(FacetLink),
+    #[serde(rename = "app.bsky.richtext.facet#tag")]
+    Tag(Ignore),
+    #[serde(rename = "app.bsky.richtext.facet#byteSlice")]
+    ByteSlice(Ignore),
+}
+
+// app.bsky.richtext.facet#link
+#[derive(Debug, Deserialize)]
+struct FacetLink {
+    uri: String,
 }
 
 #[derive(Debug, Deserialize)]
