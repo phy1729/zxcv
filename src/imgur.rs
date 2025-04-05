@@ -31,23 +31,17 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         .unwrap_or_else(|| "".split('/'))
         .collect();
 
-    if path_segments.len() == 1 {
-        Some(Path::Image(path_segments[0]))
+    let (kind, full_id): (fn(_) -> _, _) = if path_segments.len() == 1 {
+        Some((Path::Image as _, path_segments[0]))
     } else if path_segments.len() == 2 && path_segments[0] == "a" {
-        Some(Path::Album(
-            path_segments[1]
-                .rsplit_once('-')
-                .map_or(path_segments[1], |(_, id)| id),
-        ))
+        Some((Path::Album as _, path_segments[1]))
     } else if path_segments.len() == 2 && path_segments[0] == "gallery" {
-        if let Some((_, hash)) = path_segments[1].rsplit_once('-') {
-            Some(Path::Gallery(hash))
-        } else {
-            None
-        }
+        Some((Path::Gallery as _, path_segments[1]))
     } else {
         None
-    }
+    }?;
+
+    Some(kind(full_id.rsplit_once('-').map_or(full_id, |(_, id)| id)))
 }
 
 pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
@@ -170,11 +164,18 @@ mod tests {
     parse_path_tests!(
         (album, "/a/abcdefg", Some(Path::Album("abcdefg"))),
         (
-            gallery,
+            album_title,
+            "/a/title-abcdefg",
+            Some(Path::Album("abcdefg"))
+        ),
+        (gallery, "/gallery/abcdefg", Some(Path::Gallery("abcdefg"))),
+        (
+            gallery_title,
             "/gallery/foo-bar-baz-abcdefg",
             Some(Path::Gallery("abcdefg"))
         ),
         (image, "/abcdefg", Some(Path::Image("abcdefg"))),
+        (image_title, "/title-abcdefg", Some(Path::Image("abcdefg"))),
         (unknown, "/unknown/path", None),
     );
 }
