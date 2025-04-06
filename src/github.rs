@@ -130,7 +130,10 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                 agent,
                 &format!("{API_BASE}/repos/{owner}/{repo_name}/pulls/{pr_id}"),
             )?;
-            let comments: Vec<Comment> = request(agent, &pull_request.comments_url)?;
+            let mut comments: Vec<Comment> = request(agent, &pull_request.comments_url)?;
+            let review_comments: Vec<Comment> = request(agent, &pull_request.review_comments_url)?;
+            comments.extend(review_comments);
+            comments.sort_by(|a, b| a.created_at.cmp(&b.created_at));
 
             Ok(Content::Text(TextType::PostThread(PostThread {
                 before: vec![],
@@ -186,6 +189,7 @@ fn request_raw(agent: &Agent, url: &str) -> anyhow::Result<Vec<u8>> {
 #[derive(Debug, Deserialize)]
 struct Comment {
     body: String,
+    created_at: String, // ISO timestamp
     user: User,
 }
 
@@ -211,6 +215,7 @@ struct PullRequest {
     body: Option<String>,
     comments_url: String,
     patch_url: String,
+    review_comments_url: String,
     user: User,
 }
 
