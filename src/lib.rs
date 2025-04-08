@@ -180,7 +180,7 @@ fn get_content(url: &mut Url) -> anyhow::Result<Content> {
 
     if rewrite_url(url) {
         return process_generic(&agent, url);
-    };
+    }
 
     if let Some(content) = process_specific(&agent, url) {
         return content;
@@ -199,7 +199,7 @@ fn rewrite_url(url: &mut Url) -> bool {
         "bpa.st" => {
             if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
                 url.set_path(&(url.path().to_owned() + "/raw"));
-            };
+            }
         }
 
         "p.dav1d.de" => {
@@ -224,13 +224,13 @@ fn rewrite_url(url: &mut Url) -> bool {
         "dpaste.com" => {
             if !url.path().ends_with(".txt") {
                 url.set_path(&(url.path().to_owned() + ".txt"));
-            };
+            }
         }
 
         "dpaste.org" => {
             if !url.path().ends_with("/raw") {
                 url.set_path(&(url.path().to_owned() + "/raw"));
-            };
+            }
         }
 
         "marc.info" => {
@@ -248,7 +248,7 @@ fn rewrite_url(url: &mut Url) -> bool {
         "paste.mozilla.org" | "pastebin.mozilla.org" => {
             if !url.path().ends_with("/raw") {
                 url.set_path(&(url.path().to_owned() + "/raw"));
-            };
+            }
         }
 
         "pastebin.com" => {
@@ -257,7 +257,7 @@ fn rewrite_url(url: &mut Url) -> bool {
             }
         }
         _ => return false,
-    };
+    }
     true
 }
 

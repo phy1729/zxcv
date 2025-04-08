@@ -144,7 +144,7 @@ impl Iterator for TakeReplies {
                     self.stack
                         .push(thread.replies.take().unwrap_or_default().into_iter());
                     return Some(thread);
-                };
+                }
             }
             self.stack.pop();
         }
