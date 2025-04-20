@@ -340,12 +340,14 @@ pub(crate) mod gist {
             Ok(Content::Text(TextType::Raw(file.content.into())))
         } else {
             Ok(Content::Collection(Collection {
-                title: Some(gist.description),
+                title: None,
+                description: Some(gist.description),
                 items: gist
                     .files
                     .into_values()
                     .map(|file| Item {
                         title: Some(file.filename),
+                        description: None,
                         url: file.raw_url,
                     })
                     .collect(),

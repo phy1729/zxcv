@@ -28,6 +28,7 @@ use anyhow::anyhow;
 use anyhow::bail;
 use scraper::Html;
 use tempfile::NamedTempFile;
+use textwrap::Options;
 use ureq::Agent;
 use ureq::BodyReader;
 use ureq::ResponseExt;
@@ -62,12 +63,14 @@ enum Content {
 
 struct Collection {
     title: Option<String>,
+    description: Option<String>,
     items: Vec<Item>,
 }
 
 struct Item {
     title: Option<String>,
     url: String,
+    description: Option<String>,
 }
 
 impl Collection {
@@ -75,11 +78,26 @@ impl Collection {
         if let Some(title) = &self.title {
             write!(writer, "{title}\n\n")?;
         }
+        if let Some(description) = &self.description {
+            write!(writer, "{}\n\n", textwrap::fill(description, LINE_LENGTH))?;
+        }
         for item in &self.items {
             if let Some(title) = &item.title {
                 write!(writer, "{title}: ")?;
             }
             writeln!(writer, "{}", item.url)?;
+            if let Some(description) = &item.description {
+                writeln!(
+                    writer,
+                    "{}",
+                    textwrap::fill(
+                        description,
+                        Options::new(LINE_LENGTH)
+                            .initial_indent("    ")
+                            .subsequent_indent("    ")
+                    )
+                )?;
+            }
         }
         Ok(())
     }

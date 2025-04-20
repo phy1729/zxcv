@@ -86,11 +86,13 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                         } else {
                             Some(album.title)
                         },
+                        description: album.description,
                         items: album
                             .images
                             .into_iter()
                             .map(|i| Item {
                                 title: i.title,
+                                description: i.description,
                                 url: i.link,
                             })
                             .collect(),
@@ -127,12 +129,14 @@ struct Response<T> {
 #[derive(Debug, Deserialize)]
 struct Album {
     title: String,
+    description: Option<String>,
     images: Vec<AlbumImage>,
 }
 
 #[derive(Debug, Deserialize)]
 struct AlbumImage {
     title: Option<String>,
+    description: Option<String>,
     link: String,
 }
 
