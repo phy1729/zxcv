@@ -167,25 +167,12 @@ struct User {
 
 #[cfg(test)]
 mod tests {
-    use url::Url;
-
-    use super::parse_path;
     use super::Path;
-
-    macro_rules! parse_path_tests {
-        ($(($name: ident, $path: expr, $expected: pat),)*) => {
-            $(
-                #[test]
-                fn $name() {
-                    assert!($path.starts_with('/'));
-                    let url = Url::parse(&format!("https://example.com{}", $path)).unwrap();
-                    assert!(matches!(parse_path(&url), $expected));
-                }
-            )*
-        }
-    }
+    use crate::tests::parse_path_tests;
 
     parse_path_tests!(
+        super::parse_path,
+        "https://example.com{}",
         (
             commit,
             "/foo/bar/commit/06c106c106c106c106c106c106c106c106c106c1",

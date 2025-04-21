@@ -604,4 +604,19 @@ mod tests {
         assert!(!rewrite_url(&mut url));
         assert_eq!(url, expected);
     }
+
+    macro_rules! parse_path_tests {
+        ($parse_path: expr, $url_format: expr, $(($name: ident, $path: expr, $expected: pat),)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    assert!($path.starts_with('/'));
+                    let url = url::Url::parse(&format!($url_format, $path)).unwrap();
+                    assert!(matches!($parse_path(&url), $expected));
+                }
+            )*
+        }
+    }
+
+    pub(crate) use parse_path_tests;
 }
