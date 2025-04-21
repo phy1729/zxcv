@@ -36,7 +36,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
 
     Some((|| match path {
         Path::Post { profile, post } => {
-            let profile: Profile = agent
+            let profile: ProfileView = agent
                 .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
                 .query("actor", profile)
                 .call()?
@@ -79,14 +79,6 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
 }
 
 #[derive(Debug, Deserialize)]
-struct Profile {
-    did: String,
-    handle: String,
-    #[serde(rename = "displayName")]
-    display_name: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
 struct GetPostThreadResponse {
     thread: PostViewEnum,
 }
@@ -104,6 +96,133 @@ enum PostViewEnum {
 
 #[derive(Debug, Deserialize)]
 struct Ignore {}
+
+// app.bsky.actor.defs#profileView
+// app.bsky.actor.defs#profileViewDetailed
+#[derive(Debug, Deserialize)]
+struct ProfileView {
+    did: String,
+}
+
+// app.bsky.actor.defs#profileViewBasic
+#[derive(Debug, Deserialize)]
+struct ProfileViewBasic {
+    handle: String,
+    #[serde(rename = "displayName")]
+    display_name: Option<String>,
+}
+
+// app.bsky.embed.external#view
+#[derive(Debug, Deserialize)]
+struct External {
+    external: ViewExternal,
+}
+
+// app.bsky.embed.external#viewExternal
+#[derive(Debug, Deserialize)]
+struct ViewExternal {
+    uri: String,
+}
+
+// app.bsky.embed.images#view
+#[derive(Debug, Deserialize)]
+struct Images {
+    images: Vec<ViewImage>,
+}
+
+// app.bsky.embed.images#viewImage
+#[derive(Debug, Deserialize)]
+struct ViewImage {
+    fullsize: String,
+}
+
+// app.bsky.embed.record#view
+#[derive(Debug, Deserialize)]
+struct EmbedRecord {}
+
+// app.bsky.embed.recordWithMedia#view
+#[derive(Debug, Deserialize)]
+struct RecordWithMedia {
+    media: Media,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "$type")]
+enum Media {
+    #[serde(rename = "app.bsky.embed.images#view")]
+    Images(Images),
+    #[serde(rename = "app.bsky.embed.external#view")]
+    External(External),
+}
+
+// app.bsky.embed.video#view
+#[derive(Debug, Deserialize)]
+struct Video {
+    playlist: String,
+}
+
+// app.bsky.feed.defs#postView
+#[derive(Debug, Deserialize)]
+struct PostView {
+    author: ProfileViewBasic,
+    record: BskyPost,
+    embed: Option<Embed>,
+}
+
+impl PostView {
+    fn render(self) -> Post {
+        let mut urls: Vec<_> = self
+            .record
+            .facets
+            .into_iter()
+            .flatten()
+            .flat_map(|f| f.features)
+            .filter_map(|f| {
+                if let FaucetFeature::Link(link) = f {
+                    Some(link.uri)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        urls.extend(self.embed.map(Embed::urls).unwrap_or_default());
+        Post {
+            author: self.author.display_name.unwrap_or(self.author.handle),
+            body: self.record.text,
+            urls,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "$type")]
+enum Embed {
+    #[serde(rename = "app.bsky.embed.images#view")]
+    Images(Images),
+    #[serde(rename = "app.bsky.embed.external#view")]
+    External(External),
+    #[serde(rename = "app.bsky.embed.record#view")]
+    Record(EmbedRecord),
+    #[serde(rename = "app.bsky.embed.recordWithMedia#view")]
+    RecordWithMedia(RecordWithMedia),
+    #[serde(rename = "app.bsky.embed.video#view")]
+    Video(Video),
+}
+
+impl Embed {
+    fn urls(self) -> Vec<String> {
+        match self {
+            Self::External(e) => vec![e.external.uri],
+            Self::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
+            Self::Record(_) => vec![],
+            Self::RecordWithMedia(r) => match r.media {
+                Media::External(e) => vec![e.external.uri],
+                Media::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
+            },
+            Self::Video(v) => vec![v.playlist],
+        }
+    }
+}
 
 // app.bsky.feed.defs#threadViewPost
 #[derive(Debug, Deserialize)]
@@ -165,39 +284,6 @@ impl Iterator for TakeReplies {
     }
 }
 
-// app.bsky.feed.defs#postView
-#[derive(Debug, Deserialize)]
-struct PostView {
-    author: Profile,
-    record: BskyPost,
-    embed: Option<Embed>,
-}
-
-impl PostView {
-    fn render(self) -> Post {
-        let mut urls: Vec<_> = self
-            .record
-            .facets
-            .into_iter()
-            .flatten()
-            .flat_map(|f| f.features)
-            .filter_map(|f| {
-                if let FaucetFeature::Link(link) = f {
-                    Some(link.uri)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        urls.extend(self.embed.map(Embed::urls).unwrap_or_default());
-        Post {
-            author: self.author.display_name.unwrap_or(self.author.handle),
-            body: self.record.text,
-            urls,
-        }
-    }
-}
-
 // app.bsky.feed.post
 #[derive(Debug, Deserialize)]
 struct BskyPost {
@@ -228,85 +314,6 @@ enum FaucetFeature {
 #[derive(Debug, Deserialize)]
 struct FacetLink {
     uri: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "$type")]
-enum Embed {
-    #[serde(rename = "app.bsky.embed.images#view")]
-    Images(Images),
-    #[serde(rename = "app.bsky.embed.external#view")]
-    External(External),
-    #[serde(rename = "app.bsky.embed.record#view")]
-    Record(EmbedRecord),
-    #[serde(rename = "app.bsky.embed.recordWithMedia#view")]
-    RecordWithMedia(RecordWithMedia),
-    #[serde(rename = "app.bsky.embed.video#view")]
-    Video(Video),
-}
-
-impl Embed {
-    fn urls(self) -> Vec<String> {
-        match self {
-            Self::External(e) => vec![e.external.uri],
-            Self::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
-            Self::Record(_) => vec![],
-            Self::RecordWithMedia(r) => match r.media {
-                Media::External(e) => vec![e.external.uri],
-                Media::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
-            },
-            Self::Video(v) => vec![v.playlist],
-        }
-    }
-}
-
-// app.bsky.embed.external#view
-#[derive(Debug, Deserialize)]
-struct External {
-    external: ViewExternal,
-}
-
-// app.bsky.embed.external#viewExternal
-#[derive(Debug, Deserialize)]
-struct ViewExternal {
-    uri: String,
-}
-
-// app.bsky.embed.images#view
-#[derive(Debug, Deserialize)]
-struct Images {
-    images: Vec<ViewImage>,
-}
-
-// app.bsky.embed.images#viewImage
-#[derive(Debug, Deserialize)]
-struct ViewImage {
-    fullsize: String,
-}
-
-// app.bsky.embed.record#view
-#[derive(Debug, Deserialize)]
-struct EmbedRecord {}
-
-// app.bsky.embed.recordWithMedia#view
-#[derive(Debug, Deserialize)]
-struct RecordWithMedia {
-    media: Media,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "$type")]
-enum Media {
-    #[serde(rename = "app.bsky.embed.images#view")]
-    Images(Images),
-    #[serde(rename = "app.bsky.embed.external#view")]
-    External(External),
-}
-
-// app.bsky.embed.video#view
-#[derive(Debug, Deserialize)]
-struct Video {
-    playlist: String,
 }
 
 #[cfg(test)]
