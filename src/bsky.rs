@@ -8,6 +8,8 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
+const API_BASE: &str = "https://public.api.bsky.app";
+
 #[derive(Debug, PartialEq)]
 enum Path<'a> {
     Post { profile: &'a str, post: &'a str },
@@ -36,14 +38,9 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
 
     Some((|| match path {
         Path::Post { profile, post } => {
-            let profile: ProfileView = agent
-                .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
-                .query("actor", profile)
-                .call()?
-                .body_mut()
-                .read_json()?;
+            let profile = get_profile(agent, profile)?;
             let thread: GetPostThreadResponse = agent
-                .get("https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread")
+                .get(format!("{API_BASE}/xrpc/app.bsky.feed.getPostThread"))
                 .query(
                     "uri",
                     format!("at://{}/app.bsky.feed.post/{}", profile.did, post),
@@ -76,6 +73,15 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
             })))
         }
     })())
+}
+
+fn get_profile(agent: &Agent, profile: &str) -> anyhow::Result<ProfileView> {
+    Ok(agent
+        .get(format!("{API_BASE}/xrpc/app.bsky.actor.getProfile"))
+        .query("actor", profile)
+        .call()?
+        .body_mut()
+        .read_json()?)
 }
 
 #[derive(Debug, Deserialize)]
