@@ -3,7 +3,9 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
+use crate::Collection;
 use crate::Content;
+use crate::Item;
 use crate::Post;
 use crate::PostThread;
 use crate::TextType;
@@ -12,6 +14,7 @@ const API_BASE: &str = "https://public.api.bsky.app";
 
 #[derive(Debug, PartialEq)]
 enum Path<'a> {
+    List { profile: &'a str, list: &'a str },
     Post { profile: &'a str, post: &'a str },
     Profile { profile: &'a str },
 }
@@ -23,7 +26,16 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         .collect();
 
     Some(
-        if path_segments.len() == 4 && path_segments[0] == "profile" && path_segments[2] == "post" {
+        if path_segments.len() == 4 && path_segments[0] == "profile" && path_segments[2] == "lists"
+        {
+            Path::List {
+                profile: path_segments[1],
+                list: path_segments[3],
+            }
+        } else if path_segments.len() == 4
+            && path_segments[0] == "profile"
+            && path_segments[2] == "post"
+        {
             Path::Post {
                 profile: path_segments[1],
                 post: path_segments[3],
@@ -42,6 +54,33 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
     let path = parse_path(url)?;
 
     Some((|| match path {
+        Path::List { profile, list } => {
+            let profile = get_profile(agent, profile)?;
+            let list: GetListResponse = agent
+                .get(format!("{API_BASE}/xrpc/app.bsky.graph.getList"))
+                .query(
+                    "list",
+                    format!("at://{}/app.bsky.graph.list/{}", profile.did, list),
+                )
+                .call()?
+                .body_mut()
+                .read_json()?;
+
+            Ok(Content::Collection(Collection {
+                title: Some(list.list.name),
+                description: list.list.description,
+                items: list
+                    .items
+                    .into_iter()
+                    .map(|item| Item {
+                        url: format!("https://bsky.app/profile/{}", item.subject.handle),
+                        title: Some(item.subject.display_name.unwrap_or(item.subject.handle)),
+                        description: Some(item.subject.description),
+                    })
+                    .collect(),
+            }))
+        }
+
         Path::Post { profile, post } => {
             let profile = get_profile(agent, profile)?;
             let thread: GetPostThreadResponse = agent
@@ -112,6 +151,12 @@ fn get_profile(agent: &Agent, profile: &str) -> anyhow::Result<ProfileView> {
 #[derive(Debug, Deserialize)]
 struct GetAuthorFeedResponse {
     feed: Vec<FeedViewPost>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GetListResponse {
+    list: ListView,
+    items: Vec<ListItemView>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -337,6 +382,19 @@ struct BskyPost {
     facets: Option<Vec<Facet>>,
 }
 
+// app.bsky.graph.defs#listItemView
+#[derive(Debug, Deserialize)]
+struct ListItemView {
+    subject: ProfileView,
+}
+
+// app.bsky.graph.defs#listView
+#[derive(Debug, Deserialize)]
+struct ListView {
+    name: String,
+    description: Option<String>,
+}
+
 // app.bsky.richtext.facet
 #[derive(Debug, Deserialize)]
 struct Facet {
@@ -383,6 +441,14 @@ mod tests {
     }
 
     parse_path_tests!(
+        (
+            list,
+            "/profile/example.bsky.social/lists/17296c1",
+            Some(Path::List {
+                profile: "example.bsky.social",
+                list: "17296c1"
+            })
+        ),
         (
             post,
             "/profile/example.bsky.social/post/17296c1",
