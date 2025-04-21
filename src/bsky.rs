@@ -8,59 +8,73 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
-pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
+#[derive(Debug, PartialEq)]
+enum Path<'a> {
+    Post { profile: &'a str, post: &'a str },
+}
+
+fn parse_path(url: &Url) -> Option<Path<'_>> {
     let path_segments: Vec<_> = url
         .path_segments()
         .unwrap_or_else(|| "".split('/'))
         .collect();
 
-    if path_segments.len() != 4 || path_segments[0] != "profile" || path_segments[2] != "post" {
-        return None;
-    }
+    Some(
+        if path_segments.len() == 4 && path_segments[0] == "profile" && path_segments[2] == "post" {
+            Path::Post {
+                profile: path_segments[1],
+                post: path_segments[3],
+            }
+        } else {
+            return None;
+        },
+    )
+}
 
-    Some((|| {
-        let profile: Profile = agent
-            .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
-            .query("actor", path_segments[1])
-            .call()?
-            .body_mut()
-            .read_json()?;
+pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
+    let path = parse_path(url)?;
 
-        let thread: GetPostThreadResponse = agent
-            .get("https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread")
-            .query(
-                "uri",
-                format!(
-                    "at://{}/app.bsky.feed.post/{}",
-                    profile.did, path_segments[3]
-                ),
-            )
-            .call()?
-            .body_mut()
-            .read_json()?;
+    Some((|| match path {
+        Path::Post { profile, post } => {
+            let profile: Profile = agent
+                .get("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile")
+                .query("actor", profile)
+                .call()?
+                .body_mut()
+                .read_json()?;
+            let thread: GetPostThreadResponse = agent
+                .get("https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread")
+                .query(
+                    "uri",
+                    format!("at://{}/app.bsky.feed.post/{}", profile.did, post),
+                )
+                .call()?
+                .body_mut()
+                .read_json()?;
 
-        let mut thread_view = match thread.thread {
-            PostViewEnum::Thread(t) => t,
-            PostViewEnum::NotFound(_) => bail!("Post could not be found"),
-            PostViewEnum::Blocked(_) => bail!("Post was blocked"),
-        };
+            let mut thread_view = match thread.thread {
+                PostViewEnum::Thread(t) => t,
+                PostViewEnum::NotFound(_) => bail!("Post could not be found"),
+                PostViewEnum::Blocked(_) => bail!("Post was blocked"),
+            };
 
-        let mut parents: Vec<_> = thread_view
-            .take_parents()
-            .map(|p| p.post.render())
-            .collect();
-        parents.reverse();
+            let mut parents: Vec<_> = thread_view
+                .take_parents()
+                .map(|p| p.post.render())
+                .collect();
+            parents.reverse();
 
-        let replies: Vec<_> = thread_view
-            .take_replies()
-            .map(|r| r.post.render())
-            .collect();
+            let replies: Vec<_> = thread_view
+                .take_replies()
+                .map(|r| r.post.render())
+                .collect();
 
-        Ok(Content::Text(TextType::PostThread(PostThread {
-            before: parents,
-            main: thread_view.post.render(),
-            after: replies,
-        })))
+            Ok(Content::Text(TextType::PostThread(PostThread {
+                before: parents,
+                main: thread_view.post.render(),
+                after: replies,
+            })))
+        }
     })())
 }
 
@@ -293,4 +307,37 @@ enum Media {
 #[derive(Debug, Deserialize)]
 struct Video {
     playlist: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use url::Url;
+
+    use super::parse_path;
+    use super::Path;
+
+    macro_rules! parse_path_tests {
+        ($(($name: ident, $path: expr, $expected: pat),)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    assert!($path.starts_with('/'));
+                    let url = Url::parse(&format!("https://bsky.app{}", $path)).unwrap();
+                    assert!(matches!(parse_path(&url), $expected));
+                }
+            )*
+        }
+    }
+
+    parse_path_tests!(
+        (
+            post,
+            "/profile/example.bsky.social/post/17296c1",
+            Some(Path::Post {
+                profile: "example.bsky.social",
+                post: "17296c1"
+            })
+        ),
+        (unknown, "/unknown", None),
+    );
 }
