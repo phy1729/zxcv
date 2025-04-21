@@ -13,6 +13,7 @@ const API_BASE: &str = "https://public.api.bsky.app";
 #[derive(Debug, PartialEq)]
 enum Path<'a> {
     Post { profile: &'a str, post: &'a str },
+    Profile { profile: &'a str },
 }
 
 fn parse_path(url: &Url) -> Option<Path<'_>> {
@@ -26,6 +27,10 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
             Path::Post {
                 profile: path_segments[1],
                 post: path_segments[3],
+            }
+        } else if path_segments.len() == 2 && path_segments[0] == "profile" {
+            Path::Profile {
+                profile: path_segments[1],
             }
         } else {
             return None;
@@ -72,6 +77,26 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                 after: replies,
             })))
         }
+
+        Path::Profile { profile } => {
+            let profile = get_profile(agent, profile)?;
+            let posts: GetAuthorFeedResponse = agent
+                .get(format!("{API_BASE}/xrpc/app.bsky.feed.getAuthorFeed"))
+                .query("actor", profile.did)
+                .call()?
+                .body_mut()
+                .read_json()?;
+
+            Ok(Content::Text(TextType::PostThread(PostThread {
+                before: vec![],
+                main: Post {
+                    author: profile.display_name.unwrap_or(profile.handle),
+                    body: profile.description,
+                    urls: vec![],
+                },
+                after: posts.feed.into_iter().map(|p| p.post.render()).collect(),
+            })))
+        }
     })())
 }
 
@@ -82,6 +107,11 @@ fn get_profile(agent: &Agent, profile: &str) -> anyhow::Result<ProfileView> {
         .call()?
         .body_mut()
         .read_json()?)
+}
+
+#[derive(Debug, Deserialize)]
+struct GetAuthorFeedResponse {
+    feed: Vec<FeedViewPost>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -108,6 +138,10 @@ struct Ignore {}
 #[derive(Debug, Deserialize)]
 struct ProfileView {
     did: String,
+    handle: String,
+    #[serde(rename = "displayName")]
+    display_name: Option<String>,
+    description: String,
 }
 
 // app.bsky.actor.defs#profileViewBasic
@@ -165,6 +199,12 @@ enum Media {
 #[derive(Debug, Deserialize)]
 struct Video {
     playlist: String,
+}
+
+// app.bsky.feed.defs#feedViewPost
+#[derive(Debug, Deserialize)]
+struct FeedViewPost {
+    post: PostView,
 }
 
 // app.bsky.feed.defs#postView
@@ -349,6 +389,13 @@ mod tests {
             Some(Path::Post {
                 profile: "example.bsky.social",
                 post: "17296c1"
+            })
+        ),
+        (
+            profile,
+            "/profile/example.bsky.social",
+            Some(Path::Profile {
+                profile: "example.bsky.social"
             })
         ),
         (unknown, "/unknown", None),
