@@ -353,7 +353,7 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     Ok(match content_type {
         "application/pdf" => Content::Pdf(response.into_body().into_reader()),
         "application/vnd.apple.mpegurl" => Content::Video(final_url),
-        "text/html" => process_html(
+        "application/xhtml+xml" | "text/html" => process_html(
             agent,
             &final_url,
             &Html::parse_document(&response.body_mut().read_to_string()?),
