@@ -8,6 +8,10 @@ repository = "https://github/phy1729/zxcv"
 categories = ["command-line-utilities", "visualization"]
 keywords = ["cli", "command", "url", "web"]
 edition = "2021"
+include = [
+  "/src",
+  "/zxcv.1",
+]
 
 [dependencies]
 anyhow = "1.0.14"
