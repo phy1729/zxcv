@@ -220,7 +220,7 @@ fn site_tag(hostname: &str) -> Option<&'static str> {
         "meta.mathoverflow.net" => Some("meta.mathoverflow.net"),
         "space.stackexchange.com" | "thefinalfrontier.stackexchange.com" => Some("space"),
         "space.meta.stackexchange.com" | "meta.space.stackexchange.com" => Some("space.meta"),
-        "sound.stackexchange.com" | "socialsounddesign.com" | "sounddesign.stackexchange.com" => Some("sound"),
+        "sound.stackexchange.com" | "sounddesign.stackexchange.com" => Some("sound"),
         "sound.meta.stackexchange.com" | "meta.sound.stackexchange.com" => Some("sound.meta"),
         "astronomy.stackexchange.com" => Some("astronomy"),
         "astronomy.meta.stackexchange.com" | "meta.astronomy.stackexchange.com" => Some("astronomy.meta"),
