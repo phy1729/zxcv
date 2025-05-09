@@ -9,6 +9,7 @@ categories = ["command-line-utilities", "visualization"]
 keywords = ["cli", "command", "url", "web"]
 edition = "2021"
 include = [
+  "/LICENSE",
   "/src",
   "/zxcv.1",
 ]
