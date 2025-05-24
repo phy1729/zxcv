@@ -1,5 +1,3 @@
-use anyhow::bail;
-use anyhow::Context;
 use scraper::Html;
 use ureq::Agent;
 use url::Url;
@@ -17,28 +15,22 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
         return None;
     }
 
-    Some((|| {
-        let repo_path = html::select_single_element(tree, "table.tabs a:first-child")
-            .context("cgit page missing summary link")?
-            .attr("href")
-            .expect("a element has href attribute");
+    let repo_path = html::select_single_element(tree, "table.tabs a:first-child")?
+        .attr("href")
+        .expect("a element has href attribute");
 
-        let path_segments: Vec<_> = url
-            .path()
-            .strip_prefix(repo_path)
-            .context("cgit URL path does not start with repo path")?
-            .split('/')
-            .collect();
+    let path_segments: Vec<_> = url.path().strip_prefix(repo_path)?.split('/').collect();
 
-        if path_segments.len() >= 2 && path_segments[0] == "tree" {
-            let url = url.join(&format!(
+    if path_segments.len() >= 2 && path_segments[0] == "tree" {
+        let url = url
+            .join(&format!(
                 "{}/plain/{}",
                 repo_path,
                 path_segments[1..].join("/")
-            ))?;
-            process_generic(agent, &url)
-        } else {
-            bail!("Unknown cgit URL");
-        }
-    })())
+            ))
+            .expect("URL is valid");
+        Some(process_generic(agent, &url))
+    } else {
+        None
+    }
 }
