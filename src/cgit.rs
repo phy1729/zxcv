@@ -1,4 +1,5 @@
 use scraper::Html;
+use scraper::Selector;
 use ureq::Agent;
 use url::Url;
 
@@ -15,7 +16,15 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
         return None;
     }
 
-    let repo_path = html::select_single_element(tree, "table.tabs a:first-child")?
+    let selector = Selector::parse("table.tabs a").expect("valid selector");
+    let summary_links: Vec<_> = tree
+        .select(&selector)
+        .filter(|e| e.inner_html() == "summary")
+        .collect();
+    let Ok([summary_link]): Result<[_; 1], _> = summary_links.try_into() else {
+        return None;
+    };
+    let repo_path = summary_link
         .attr("href")
         .expect("a element has href attribute");
 
