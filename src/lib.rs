@@ -42,6 +42,7 @@ mod cgit;
 mod discourse;
 mod gitea;
 mod github;
+mod gitweb;
 mod html;
 mod imgur;
 mod lobsters;
@@ -375,6 +376,7 @@ fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content
         cgit::process,
         discourse::process,
         gitea::process,
+        gitweb::process,
         mastodon::process,
         nextcloud::process,
         process_main_text,
