@@ -55,6 +55,7 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
             .read_json()?;
 
         Ok(Content::Text(TextType::PostThread(PostThread {
+            title: None,
             before: context
                 .ancestors
                 .into_iter()

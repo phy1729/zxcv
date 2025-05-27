@@ -111,6 +111,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                 .collect();
 
             Ok(Content::Text(TextType::PostThread(PostThread {
+                title: None,
                 before: parents,
                 main: thread_view.post.render(),
                 after: replies,
@@ -127,6 +128,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                 .read_json()?;
 
             Ok(Content::Text(TextType::PostThread(PostThread {
+                title: None,
                 before: vec![],
                 main: Post {
                     author: profile.display_name.unwrap_or(profile.handle),

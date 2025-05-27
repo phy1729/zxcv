@@ -1,5 +1,3 @@
-use std::fmt::Write;
-
 use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
@@ -23,16 +21,13 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
         }
 
         let story: Story = agent.get(url.as_str()).call()?.body_mut().read_json()?;
-        let mut body = story.title.clone();
-        if !story.description_plain.is_empty() {
-            write!(body, "\n{}", story.description_plain).expect("write! to String cannot fail");
-        }
 
         Ok(Content::Text(TextType::PostThread(PostThread {
+            title: Some(story.title),
             before: vec![],
             main: Post {
                 author: story.submitter_user,
-                body,
+                body: story.description_plain,
                 urls: vec![story.url],
             },
             after: story

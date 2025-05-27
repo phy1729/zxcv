@@ -138,6 +138,7 @@ impl Display for Post {
 }
 
 struct PostThread {
+    title: Option<String>,
     main: Post,
     before: Vec<Post>,
     after: Vec<Post>,
@@ -151,6 +152,9 @@ impl TextType {
             }
             Self::Post(post) => write!(writer, "{post}"),
             Self::PostThread(thread) => {
+                if let Some(title) = &thread.title {
+                    write!(writer, "{title}\n\n")?;
+                }
                 let post_chain = thread
                     .before
                     .iter()

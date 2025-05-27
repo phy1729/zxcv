@@ -116,6 +116,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
             let comments: Vec<Comment> = request(agent, &issue.comments_url)?;
 
             Ok(Content::Text(TextType::PostThread(PostThread {
+                title: Some(issue.title),
                 before: vec![],
                 main: Post {
                     author: issue.user.login,
@@ -136,6 +137,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
             comments.sort_by(|a, b| a.created_at.cmp(&b.created_at));
 
             Ok(Content::Text(TextType::PostThread(PostThread {
+                title: Some(pull_request.title),
                 before: vec![],
                 main: Post {
                     author: pull_request.user.login,
@@ -207,6 +209,7 @@ impl From<Comment> for Post {
 struct Issue {
     body: String,
     comments_url: String,
+    title: String,
     user: User,
 }
 
@@ -216,6 +219,7 @@ struct PullRequest {
     comments_url: String,
     patch_url: String,
     review_comments_url: String,
+    title: String,
     user: User,
 }
 

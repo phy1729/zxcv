@@ -99,6 +99,7 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
                     .body_mut()
                     .read_json()?;
                 Ok(Content::Text(TextType::PostThread(PostThread {
+                    title: Some(issue.title),
                     before: vec![],
                     main: Post {
                         author: issue.user.login,
@@ -157,6 +158,7 @@ struct ContentsResponse {
 #[derive(Debug, Deserialize)]
 struct Issue {
     body: String,
+    title: String,
     user: User,
 }
 

@@ -37,6 +37,7 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
                 .read_json()?;
 
             Ok(Content::Text(TextType::PostThread(PostThread {
+                title: Some(topic.title),
                 before: vec![],
                 main: topic.post_stream.posts.remove(0).render(url),
                 after: topic
@@ -76,4 +77,5 @@ struct PostStream {
 #[derive(Debug, Deserialize)]
 struct Topic {
     post_stream: PostStream,
+    title: String,
 }

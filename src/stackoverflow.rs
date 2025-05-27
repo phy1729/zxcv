@@ -443,12 +443,14 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
                         .and_then(|a| a.into_iter().find(|a| a.answer_id == answer_id))
                         .context("question {id} missing requested answer id {answer_id}")?;
                     PostThread {
+                        title: Some(question.title),
                         before: vec![question_post],
                         main: answer.render(url),
                         after: vec![],
                     }
                 } else {
                     PostThread {
+                        title: Some(question.title),
                         before: vec![],
                         main: question_post,
                         after: question
@@ -484,6 +486,7 @@ struct Question {
     answers: Option<Vec<Answer>>,
     body: String,
     owner: User,
+    title: String,
 }
 
 #[derive(Debug, Deserialize)]
