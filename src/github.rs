@@ -87,13 +87,13 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
     let path = parse_path(url)?;
 
     Some((|| match path {
-        Path::Blob(owner, repo_name, filepath, r#ref) => {
-            let contents = request_raw(
-                agent,
-                &format!("{API_BASE}/repos/{owner}/{repo_name}/contents{filepath}?ref={ref}"),
-            )?;
-            Ok(Content::Text(TextType::Raw(contents)))
-        }
+        Path::Blob(owner, repo_name, filepath, r#ref) => process_generic(
+            agent,
+            &Url::parse(&format!(
+                "https://raw.github.com/{owner}/{repo_name}/{ref}{filepath}"
+            ))
+            .expect("URL is valid"),
+        ),
         Path::Commit(owner, repo_name, commit_hash) => process_generic(
             agent,
             &Url::parse(&format!(
