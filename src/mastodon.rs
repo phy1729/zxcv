@@ -10,7 +10,11 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
-pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+pub(crate) fn try_process(
+    agent: &Agent,
+    url: &Url,
+    tree: &Html,
+) -> Option<anyhow::Result<Content>> {
     // Akkoma implements the Mastodon API with some differences.
     let is_akkoma = html::select_single_element(tree, "noscript")
         .map(|e| e.inner_html().contains("Akkoma"))

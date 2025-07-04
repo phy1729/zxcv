@@ -379,12 +379,12 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
 
 fn process_html(agent: &Agent, url: &Url, tree: &Html) -> anyhow::Result<Content> {
     for process in [
-        cgit::process,
-        discourse::process,
-        gitea::process,
-        gitweb::process,
-        mastodon::process,
-        nextcloud::process,
+        cgit::try_process,
+        discourse::try_process,
+        gitea::try_process,
+        gitweb::try_process,
+        mastodon::try_process,
+        nextcloud::try_process,
         process_main_text,
         process_body,
     ] {

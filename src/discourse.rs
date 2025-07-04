@@ -10,7 +10,11 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 
-pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+pub(crate) fn try_process(
+    agent: &Agent,
+    url: &Url,
+    tree: &Html,
+) -> Option<anyhow::Result<Content>> {
     if html::select_single_element(tree, "meta[name=\"generator\"]")
         .and_then(|e| e.attr("content"))
         .map(|c| c.starts_with("Discourse "))

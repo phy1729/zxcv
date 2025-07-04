@@ -8,7 +8,11 @@ use crate::html;
 use crate::process_generic;
 use crate::Content;
 
-pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::Result<Content>> {
+pub(crate) fn try_process(
+    agent: &Agent,
+    url: &Url,
+    tree: &Html,
+) -> Option<anyhow::Result<Content>> {
     if html::select_single_element(tree, "meta[name=\"apple-itunes-app\"]")
         .and_then(|e| e.attr("content"))
         != Some("app-id=1125420102")
