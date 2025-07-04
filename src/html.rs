@@ -91,16 +91,23 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
 
                     let destination: Option<Cow<str>> = match url.join(link) {
                         Ok(abs_link) => {
-                            let is_anchor = url
-                                .make_relative(&abs_link)
-                                .map(|u| u.is_empty() || u.starts_with('#'))
-                                == Some(true);
-                            if !is_anchor
-                                || text.chars().count() > if text.starts_with('\\') { 2 } else { 1 }
-                            {
-                                Some(Into::<String>::into(abs_link).into())
+                            if let Some(relative) = url.make_relative(&abs_link) {
+                                // Footnote
+                                if relative.starts_with('#')
+                                    && text.chars().all(|c| c.is_numeric() || c == '[' || c == ']')
+                                {
+                                    Some(relative.into())
+                                // Other anchor (usually to itself in a header)
+                                } else if (relative.is_empty() || relative.starts_with('#'))
+                                    && text.chars().count()
+                                        <= if text.starts_with('\\') { 2 } else { 1 }
+                                {
+                                    None
+                                } else {
+                                    Some(Into::<String>::into(abs_link).into())
+                                }
                             } else {
-                                None
+                                Some(Into::<String>::into(abs_link).into())
                             }
                         }
                         Err(_) => Some(link.into()),
@@ -329,6 +336,8 @@ mod tests {
         (link_not_code, "<a href=\"/foo\">`bar`</a>", "[\\`bar\\`](https://example.com/foo)"),
         (link_anchor, "<a href=\"#somewhere\">text</a>", "[text](https://example.com/#somewhere)"),
         (link_anchor_useless, "<h3>header <a href=\"#somewhere\">#</a></h3>", "### header"),
+        (link_footnote, "<a href=\"#fn-1\">1</a>", "[1](#fn-1)"),
+        (link_footnote_brackets, "<a href=\"#fn-1\">[1]</a>", "[[1]](#fn-1)"),
         (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
         (strong_leading_space, "foo<strong> bar</strong> baz", "foo **bar** baz"),
         (strong_trailing_space, "foo <strong>bar </strong>baz", "foo **bar** baz"),
