@@ -1,5 +1,4 @@
 use anyhow::bail;
-use anyhow::Context;
 use base64::Engine;
 use scraper::Html;
 use serde::Deserialize;
@@ -61,73 +60,71 @@ pub(crate) fn process(agent: &Agent, url: &Url, tree: &Html) -> Option<anyhow::R
         return None;
     }
 
-    Some((|| {
-        let path = parse_path(url).context("Unknown Gitea URL")?;
-        let api_base = url.join("/api/v1/").expect("URL is valid");
+    let path = parse_path(url)?;
+    let api_base = url.join("/api/v1/").expect("URL is valid");
 
-        match path {
-            Path::Commit(owner, repo, sha) => {
-                let response = agent
-                    .get(
-                        api_base
-                            .join(&format!("repos/{owner}/{repo}/git/commits/{sha}.patch"))
-                            .expect("URL is valid")
-                            .as_str(),
-                    )
-                    .call()?;
-                Ok(Content::Text(TextType::Raw(read_raw_response(response)?)))
-            }
-            Path::Issue(owner, repo, index) => {
-                let issue: Issue = agent
-                    .get(
-                        api_base
-                            .join(&format!("repos/{owner}/{repo}/issues/{index}"))
-                            .expect("URL is valid")
-                            .as_str(),
-                    )
-                    .call()?
-                    .body_mut()
-                    .read_json()?;
-                let comments: Vec<Comment> = agent
-                    .get(
-                        api_base
-                            .join(&format!("repos/{owner}/{repo}/issues/{index}/comments"))
-                            .expect("URL is valid")
-                            .as_str(),
-                    )
-                    .call()?
-                    .body_mut()
-                    .read_json()?;
-                Ok(Content::Text(TextType::PostThread(PostThread {
-                    title: Some(issue.title),
-                    before: vec![],
-                    main: Post {
-                        author: issue.user.login,
-                        body: issue.body,
-                        urls: vec![],
-                    },
-                    after: comments.into_iter().map(Into::into).collect(),
-                })))
-            }
-            Path::Src(owner, repo, filepath, r#ref) => {
-                let content: ContentsResponse = agent
-                    .get(
-                        api_base
-                            .join(&format!("repos/{owner}/{repo}/contents{filepath}"))
-                            .expect("URL is valid")
-                            .as_str(),
-                    )
-                    .query("ref", r#ref)
-                    .call()?
-                    .body_mut()
-                    .read_json()?;
-                if content.r#type == "file" {
-                    Ok(Content::Text(TextType::Raw(
-                        base64::engine::general_purpose::STANDARD.decode(content.content)?,
-                    )))
-                } else {
-                    bail!("Unknown Gitea content type: {}", content.r#type);
-                }
+    Some((|| match path {
+        Path::Commit(owner, repo, sha) => {
+            let response = agent
+                .get(
+                    api_base
+                        .join(&format!("repos/{owner}/{repo}/git/commits/{sha}.patch"))
+                        .expect("URL is valid")
+                        .as_str(),
+                )
+                .call()?;
+            Ok(Content::Text(TextType::Raw(read_raw_response(response)?)))
+        }
+        Path::Issue(owner, repo, index) => {
+            let issue: Issue = agent
+                .get(
+                    api_base
+                        .join(&format!("repos/{owner}/{repo}/issues/{index}"))
+                        .expect("URL is valid")
+                        .as_str(),
+                )
+                .call()?
+                .body_mut()
+                .read_json()?;
+            let comments: Vec<Comment> = agent
+                .get(
+                    api_base
+                        .join(&format!("repos/{owner}/{repo}/issues/{index}/comments"))
+                        .expect("URL is valid")
+                        .as_str(),
+                )
+                .call()?
+                .body_mut()
+                .read_json()?;
+            Ok(Content::Text(TextType::PostThread(PostThread {
+                title: Some(issue.title),
+                before: vec![],
+                main: Post {
+                    author: issue.user.login,
+                    body: issue.body,
+                    urls: vec![],
+                },
+                after: comments.into_iter().map(Into::into).collect(),
+            })))
+        }
+        Path::Src(owner, repo, filepath, r#ref) => {
+            let content: ContentsResponse = agent
+                .get(
+                    api_base
+                        .join(&format!("repos/{owner}/{repo}/contents{filepath}"))
+                        .expect("URL is valid")
+                        .as_str(),
+                )
+                .query("ref", r#ref)
+                .call()?
+                .body_mut()
+                .read_json()?;
+            if content.r#type == "file" {
+                Ok(Content::Text(TextType::Raw(
+                    base64::engine::general_purpose::STANDARD.decode(content.content)?,
+                )))
+            } else {
+                bail!("Unknown Gitea content type: {}", content.r#type);
             }
         }
     })())
