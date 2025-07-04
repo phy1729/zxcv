@@ -64,6 +64,10 @@ pub(crate) fn try_process(
         return None;
     }
 
+    process(agent, url)
+}
+
+pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
     let path = parse_path(url)?;
     let api_base = url.join("/api/v1/").expect("URL is valid");
 
