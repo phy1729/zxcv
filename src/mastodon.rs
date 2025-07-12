@@ -1,4 +1,3 @@
-use anyhow::Context;
 use scraper::Html;
 use serde::Deserialize;
 use ureq::Agent;
@@ -9,6 +8,28 @@ use crate::Post;
 use crate::PostThread;
 use crate::TextType;
 use crate::html;
+
+#[derive(Debug, PartialEq)]
+enum Path<'a> {
+    Status { status_id: &'a str },
+}
+
+fn parse_path(url: &Url) -> Option<Path<'_>> {
+    let path_segments: Vec<_> = url
+        .path_segments()
+        .unwrap_or_else(|| "".split('/'))
+        .collect();
+
+    Some(
+        if path_segments.len() == 2 && path_segments[0].starts_with('@') {
+            Path::Status {
+                status_id: path_segments[1],
+            }
+        } else {
+            return None;
+        },
+    )
+}
 
 pub(crate) fn try_process(
     agent: &Agent,
@@ -41,42 +62,41 @@ pub(crate) fn try_process(
         return None;
     }
 
+    let path = parse_path(url)?;
     let api_base = url.join("/api/v1/").expect("URL is valid");
 
-    Some((|| {
-        let post_id = url
-            .path_segments()
-            .and_then(|mut s| s.nth(1))
-            .context("Mastodon URL without post id")?;
-        let status: Status = agent
-            .get(api_base.join(&format!("statuses/{post_id}"))?.as_str())
-            .call()?
-            .body_mut()
-            .read_json()?;
-        let context: StatusContext = agent
-            .get(
-                api_base
-                    .join(&format!("statuses/{post_id}/context"))?
-                    .as_str(),
-            )
-            .call()?
-            .body_mut()
-            .read_json()?;
+    Some((|| match path {
+        Path::Status { status_id } => {
+            let status: Status = agent
+                .get(api_base.join(&format!("statuses/{status_id}"))?.as_str())
+                .call()?
+                .body_mut()
+                .read_json()?;
+            let context: StatusContext = agent
+                .get(
+                    api_base
+                        .join(&format!("statuses/{status_id}/context"))?
+                        .as_str(),
+                )
+                .call()?
+                .body_mut()
+                .read_json()?;
 
-        Ok(Content::Text(TextType::PostThread(PostThread {
-            title: None,
-            before: context
-                .ancestors
-                .into_iter()
-                .map(|s| s.render(url))
-                .collect(),
-            main: status.render(url),
-            after: context
-                .descendants
-                .into_iter()
-                .map(|s| s.render(url))
-                .collect(),
-        })))
+            Ok(Content::Text(TextType::PostThread(PostThread {
+                title: None,
+                before: context
+                    .ancestors
+                    .into_iter()
+                    .map(|s| s.render(url))
+                    .collect(),
+                main: status.render(url),
+                after: context
+                    .descendants
+                    .into_iter()
+                    .map(|s| s.render(url))
+                    .collect(),
+            })))
+        }
     })())
 }
 
@@ -111,4 +131,23 @@ struct MediaAttachment {
 struct StatusContext {
     ancestors: Vec<Status>,
     descendants: Vec<Status>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Path;
+    use crate::tests::parse_path_tests;
+
+    parse_path_tests!(
+        super::parse_path,
+        "https://example.com{}",
+        (
+            status,
+            "/@example/17291729",
+            Some(Path::Status {
+                status_id: "17291729"
+            })
+        ),
+        (unknown, "/unknown", None),
+    );
 }
