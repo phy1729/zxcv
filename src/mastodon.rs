@@ -20,12 +20,12 @@ pub(crate) fn try_process(
         .map(|e| e.inner_html().contains("Akkoma"))
         == Some(true);
 
-    let is_mastodon = html::select_single_element(tree, "div#mastodon").is_some();
-
     // Iceshrimp implements the Mastodon API.
     let is_iceshrimp = html::select_single_element(tree, "meta[name=\"application-name\"]")
         .and_then(|e| e.attr("content"))
         == Some("Iceshrimp");
+
+    let is_mastodon = html::select_single_element(tree, "div#mastodon").is_some();
 
     // Pleroma implements the Mastodon API with some differences.
     let is_pleroma = html::select_single_element(tree, "noscript")
