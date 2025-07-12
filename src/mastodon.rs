@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use scraper::Html;
 use serde::Deserialize;
 use ureq::Agent;
@@ -11,6 +13,7 @@ use crate::html;
 
 #[derive(Debug, PartialEq)]
 enum Path<'a> {
+    Profile { acct: &'a str },
     Status { status_id: &'a str },
 }
 
@@ -21,7 +24,11 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         .collect();
 
     Some(
-        if path_segments.len() == 2 && path_segments[0].starts_with('@') {
+        if path_segments.len() == 1
+            && let Some(acct) = path_segments[0].strip_prefix('@')
+        {
+            Path::Profile { acct }
+        } else if path_segments.len() == 2 && path_segments[0].starts_with('@') {
             Path::Status {
                 status_id: path_segments[1],
             }
@@ -66,6 +73,48 @@ pub(crate) fn try_process(
     let api_base = url.join("/api/v1/").expect("URL is valid");
 
     Some((|| match path {
+        Path::Profile { acct } => {
+            let account: Account = agent
+                .get(api_base.join("accounts/lookup")?.as_str())
+                .query("acct", acct)
+                .call()?
+                .body_mut()
+                .read_json()?;
+            let statuses: Vec<Status> = agent
+                .get(
+                    api_base
+                        .join(&format!("accounts/{}/statuses", account.id))?
+                        .as_str(),
+                )
+                .call()?
+                .body_mut()
+                .read_json()?;
+
+            let mut body = html::render(&account.note, url);
+            if !body.is_empty() && !account.fields.is_empty() {
+                body.push('\n');
+            }
+            for field in account.fields {
+                write!(
+                    body,
+                    "\n{}: {}",
+                    field.name,
+                    html::render(&field.value, url)
+                )?;
+            }
+
+            Ok(Content::Text(TextType::PostThread(PostThread {
+                title: None,
+                before: vec![],
+                main: Post {
+                    author: account.display_name,
+                    body,
+                    urls: vec![],
+                },
+                after: statuses.into_iter().map(|s| s.render(url)).collect(),
+            })))
+        }
+
         Path::Status { status_id } => {
             let status: Status = agent
                 .get(api_base.join(&format!("statuses/{status_id}"))?.as_str())
@@ -101,6 +150,20 @@ pub(crate) fn try_process(
 }
 
 #[derive(Debug, Deserialize)]
+struct Account {
+    display_name: String,
+    fields: Vec<Field>,
+    id: String,
+    note: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Field {
+    name: String,
+    value: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct Status {
     content: String,
     account: Account,
@@ -115,11 +178,6 @@ impl Status {
             urls: self.media_attachments.into_iter().map(|a| a.url).collect(),
         }
     }
-}
-
-#[derive(Debug, Deserialize)]
-struct Account {
-    display_name: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -141,6 +199,11 @@ mod tests {
     parse_path_tests!(
         super::parse_path,
         "https://example.com{}",
+        (
+            profile,
+            "/@example",
+            Some(Path::Profile { acct: "example" })
+        ),
         (
             status,
             "/@example/17291729",
