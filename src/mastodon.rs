@@ -41,19 +41,24 @@ pub(crate) fn try_process(
         return None;
     }
 
+    let api_base = url.join("/api/v1/").expect("URL is valid");
+
     Some((|| {
         let post_id = url
             .path_segments()
             .and_then(|mut s| s.nth(1))
             .context("Mastodon URL without post id")?;
-        let api_base = url.join("/api/v1/statuses/")?;
         let status: Status = agent
-            .get(api_base.join(post_id)?.as_str())
+            .get(api_base.join(&format!("statuses/{post_id}"))?.as_str())
             .call()?
             .body_mut()
             .read_json()?;
         let context: StatusContext = agent
-            .get(api_base.join(&format!("{post_id}/context"))?.as_str())
+            .get(
+                api_base
+                    .join(&format!("statuses/{post_id}/context"))?
+                    .as_str(),
+            )
             .call()?
             .body_mut()
             .read_json()?;
