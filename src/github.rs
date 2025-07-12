@@ -1,14 +1,14 @@
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use ureq::Agent;
 use url::Url;
 
-use crate::process_generic;
-use crate::read_raw_response;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
 use crate::TextType;
+use crate::process_generic;
+use crate::read_raw_response;
 
 const API_BASE: &str = "https://api.github.com";
 

@@ -34,11 +34,7 @@ where
         if let Some(next) = self.chars.next() {
             if is_whitespace(next) {
                 self.next = self.chars.find(|c| !is_whitespace(*c));
-                if self.next.is_some() {
-                    Some(' ')
-                } else {
-                    None
-                }
+                if self.next.is_some() { Some(' ') } else { None }
             } else {
                 Some(next)
             }

@@ -3,9 +3,9 @@ use scraper::Selector;
 use ureq::Agent;
 use url::Url;
 
+use crate::Content;
 use crate::html;
 use crate::process_generic;
-use crate::Content;
 
 pub(crate) fn try_process(
     agent: &Agent,

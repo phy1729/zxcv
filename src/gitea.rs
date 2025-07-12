@@ -5,12 +5,12 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
-use crate::html;
-use crate::read_raw_response;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
 use crate::TextType;
+use crate::html;
+use crate::read_raw_response;
 
 #[derive(Debug, PartialEq)]
 enum Path<'a> {

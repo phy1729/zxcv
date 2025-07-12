@@ -4,8 +4,8 @@ use textwrap::Options;
 use unicode_width::UnicodeWidthStr;
 
 use super::escape_markdown::EscapeMarkdown;
-use super::squeeze_whitespace::is_whitespace;
 use super::squeeze_whitespace::SqueezeWhitespace;
+use super::squeeze_whitespace::is_whitespace;
 
 #[derive(Debug)]
 pub(super) struct State {

@@ -1,14 +1,14 @@
-use anyhow::bail;
 use anyhow::Context;
+use anyhow::bail;
 use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
-use crate::html;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
 use crate::TextType;
+use crate::html;
 
 const API_BASE: &str = "https://api.stackexchange.com/2.3/";
 const FILTER: &str = "!T*hPNRA69ofM1izkPP";

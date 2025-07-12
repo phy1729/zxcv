@@ -4,11 +4,11 @@ use serde::Deserialize;
 use ureq::Agent;
 use url::Url;
 
-use crate::html;
 use crate::Content;
 use crate::Post;
 use crate::PostThread;
 use crate::TextType;
+use crate::html;
 
 pub(crate) fn try_process(
     agent: &Agent,

@@ -1,13 +1,13 @@
 use anyhow::Context;
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use ureq::Agent;
 use url::Url;
 
-use crate::process_generic;
 use crate::Collection;
 use crate::Content;
 use crate::Item;
+use crate::process_generic;
 
 const API_BASE: &str = "https://api.imgur.com/3";
 const IMGUR_PUBLIC_CLIENT_ID: &str = "546c25a59c58ad7";

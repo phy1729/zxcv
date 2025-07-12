@@ -7,8 +7,8 @@ use url::Url;
 
 use crate::Article;
 use crate::Content;
-use crate::TextType;
 use crate::LINE_LENGTH;
+use crate::TextType;
 
 pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
     let raw_title = url.path_segments().and_then(|mut s| s.nth(1))?;

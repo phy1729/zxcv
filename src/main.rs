@@ -1,14 +1,14 @@
 //! The entrypoint for `zxcv`.
 use std::env;
 
-use anyhow::bail;
 use anyhow::Context;
+use anyhow::bail;
 use getopt::Opt;
 use getopt::Parser;
 use pledge::pledge_promises;
 
-use zxcv::show_url;
 use zxcv::Config;
+use zxcv::show_url;
 
 fn main() -> anyhow::Result<()> {
     let mut config_file = None;

@@ -2,11 +2,11 @@ use std::borrow::Cow;
 use std::num::NonZeroUsize;
 
 use ego_tree::NodeRef;
-use scraper::node::Element;
 use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
 use scraper::Selector;
+use scraper::node::Element;
 use unicode_width::UnicodeWidthStr;
 use url::Url;
 
@@ -324,41 +324,141 @@ mod tests {
         (whitespace_leading, "  foo bar", "foo bar"),
         (whitespace_trailing, "foo bar  ", "foo bar"),
         (whitespace_span_trailing, "<span>foo </span> bar", "foo bar"),
-        (whitespace_span_middle, "<span>foo</span> <span>bar</span>", "foo bar"),
+        (
+            whitespace_span_middle,
+            "<span>foo</span> <span>bar</span>",
+            "foo bar"
+        ),
         (whitespace_zwsp, "foo <p>\u{200b}</p> bar", "foo\n\nbar"),
-        (whitespace_link, "<span>foo </span><a href=\"/2\">bar</a>", "foo [bar](https://example.com/2)"),
-        (link, "<a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
-        (link_url_is_raw, "<a href=\"/foo_bar\">baz</a>", "[baz](https://example.com/foo_bar)"),
-        (link_whitespace_pre, "foo<a href=\"foo\"> bar</a> baz", "foo [bar](https://example.com/foo) baz"),
-        (link_whitespace_post, "foo <a href=\"foo\">bar </a>baz", "foo [bar](https://example.com/foo) baz"),
-        (link_leading_whitespace, " <a href=\"/foo\">bar</a>", "[bar](https://example.com/foo)"),
-        (link_code, "<a href=\"/foo\"><code>bar</code></a>", "[`bar`](https://example.com/foo)"),
-        (link_not_code, "<a href=\"/foo\">`bar`</a>", "[\\`bar\\`](https://example.com/foo)"),
-        (link_anchor, "<a href=\"#somewhere\">text</a>", "[text](https://example.com/#somewhere)"),
-        (link_anchor_useless, "<h3>header <a href=\"#somewhere\">#</a></h3>", "### header"),
+        (
+            whitespace_link,
+            "<span>foo </span><a href=\"/2\">bar</a>",
+            "foo [bar](https://example.com/2)"
+        ),
+        (
+            link,
+            "<a href=\"/foo\">bar</a>",
+            "[bar](https://example.com/foo)"
+        ),
+        (
+            link_url_is_raw,
+            "<a href=\"/foo_bar\">baz</a>",
+            "[baz](https://example.com/foo_bar)"
+        ),
+        (
+            link_whitespace_pre,
+            "foo<a href=\"foo\"> bar</a> baz",
+            "foo [bar](https://example.com/foo) baz"
+        ),
+        (
+            link_whitespace_post,
+            "foo <a href=\"foo\">bar </a>baz",
+            "foo [bar](https://example.com/foo) baz"
+        ),
+        (
+            link_leading_whitespace,
+            " <a href=\"/foo\">bar</a>",
+            "[bar](https://example.com/foo)"
+        ),
+        (
+            link_code,
+            "<a href=\"/foo\"><code>bar</code></a>",
+            "[`bar`](https://example.com/foo)"
+        ),
+        (
+            link_not_code,
+            "<a href=\"/foo\">`bar`</a>",
+            "[\\`bar\\`](https://example.com/foo)"
+        ),
+        (
+            link_anchor,
+            "<a href=\"#somewhere\">text</a>",
+            "[text](https://example.com/#somewhere)"
+        ),
+        (
+            link_anchor_useless,
+            "<h3>header <a href=\"#somewhere\">#</a></h3>",
+            "### header"
+        ),
         (link_footnote, "<a href=\"#fn-1\">1</a>", "[1](#fn-1)"),
-        (link_footnote_brackets, "<a href=\"#fn-1\">[1]</a>", "[[1]](#fn-1)"),
+        (
+            link_footnote_brackets,
+            "<a href=\"#fn-1\">[1]</a>",
+            "[[1]](#fn-1)"
+        ),
         (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
-        (strong_leading_space, "foo<strong> bar</strong> baz", "foo **bar** baz"),
-        (strong_trailing_space, "foo <strong>bar </strong>baz", "foo **bar** baz"),
+        (
+            strong_leading_space,
+            "foo<strong> bar</strong> baz",
+            "foo **bar** baz"
+        ),
+        (
+            strong_trailing_space,
+            "foo <strong>bar </strong>baz",
+            "foo **bar** baz"
+        ),
         (strong_empty, "foo <strong> </strong>baz", "foo baz"),
-        (strong_em, "foo <strong><em>bar</em></strong> baz", "foo **_bar_** baz"),
-        (strong_em_pre, "foo<strong> bar<em> baz </em> </strong>quux", "foo **bar _baz_** quux"),
-        (strong_em_post, "foo<strong> <em> bar </em>baz </strong>quux", "foo **_bar_ baz** quux"),
-        (strong_em_empty, "foo<strong><em> </em>bar</strong> baz", "foo **bar** baz"),
+        (
+            strong_em,
+            "foo <strong><em>bar</em></strong> baz",
+            "foo **_bar_** baz"
+        ),
+        (
+            strong_em_pre,
+            "foo<strong> bar<em> baz </em> </strong>quux",
+            "foo **bar _baz_** quux"
+        ),
+        (
+            strong_em_post,
+            "foo<strong> <em> bar </em>baz </strong>quux",
+            "foo **_bar_ baz** quux"
+        ),
+        (
+            strong_em_empty,
+            "foo<strong><em> </em>bar</strong> baz",
+            "foo **bar** baz"
+        ),
         (blockquote, "<blockquote>foo</blockquote>", "> foo"),
         (blockquote_empty, "<blockquote></blockquote>", ""),
-        (blockquote_over_ps, "before <blockquote>\n<p>foo</p><p>bar</p>\n</blockquote> after", "before\n\n> foo\n>\n> bar\n\nafter"),
-        (blockquote_adjacent, "<blockquote>foo</blockquote><blockquote>bar</blockquote>", "> foo\n\n> bar"),
-        (blockquote_nested_empty, "<blockquote>foo<blockquote></blockquote>bar</blockquote", "> foo\n>\n> bar"),
-        (blockquote_pre, "<blockquote>foo<pre>  bar</pre>baz</blockquote>", "> foo\n>\n> ```\n>   bar\n> ```\n>\n> baz"),
-        (blockquote_pre_newline, "<blockquote>foo<pre>  bar\n</pre>baz</blockquote>", "> foo\n>\n> ```\n>   bar\n> ```\n>\n> baz"),
+        (
+            blockquote_over_ps,
+            "before <blockquote>\n<p>foo</p><p>bar</p>\n</blockquote> after",
+            "before\n\n> foo\n>\n> bar\n\nafter"
+        ),
+        (
+            blockquote_adjacent,
+            "<blockquote>foo</blockquote><blockquote>bar</blockquote>",
+            "> foo\n\n> bar"
+        ),
+        (
+            blockquote_nested_empty,
+            "<blockquote>foo<blockquote></blockquote>bar</blockquote",
+            "> foo\n>\n> bar"
+        ),
+        (
+            blockquote_pre,
+            "<blockquote>foo<pre>  bar</pre>baz</blockquote>",
+            "> foo\n>\n> ```\n>   bar\n> ```\n>\n> baz"
+        ),
+        (
+            blockquote_pre_newline,
+            "<blockquote>foo<pre>  bar\n</pre>baz</blockquote>",
+            "> foo\n>\n> ```\n>   bar\n> ```\n>\n> baz"
+        ),
         (br, "foo<br>bar", "foo\nbar"),
         (br_space, "foo<br> bar", "foo\nbar"),
         (br_space_span, "foo<br>\n<span>bar</span>", "foo\nbar"),
         (code, "foo <code>bar</code> baz", "foo `bar` baz"),
-        (code_leading_space, "foo<code> bar</code> baz", "foo `bar` baz"),
-        (code_trailing_space, "foo <code>bar </code>baz", "foo `bar` baz"),
+        (
+            code_leading_space,
+            "foo<code> bar</code> baz",
+            "foo `bar` baz"
+        ),
+        (
+            code_trailing_space,
+            "foo <code>bar </code>baz",
+            "foo `bar` baz"
+        ),
         (code_empty, "foo <code> </code>baz", "foo baz"),
         (code_literals, "<code>*_foo</code>bar*", "`*_foo`bar\\*"),
         (div, "<div>foo</div><div>bar</div>", "foo\n\nbar"),
@@ -368,35 +468,111 @@ mod tests {
         (em_trailing_space, "foo <em>bar </em>baz", "foo _bar_ baz"),
         (em_empty, "foo <em> </em>baz", "foo baz"),
         (header_h1, "<h1>header</h1>", "header\n======"),
-        (header_h1_long, "<h1>header header header header header header header header header header header header</h1>", "header header header header header header header header header header header\nheader\n============================================================================"),
+        (
+            header_h1_long,
+            "<h1>header header header header header header header header header header header header</h1>",
+            "header header header header header header header header header header header\nheader\n============================================================================"
+        ),
         (header_unicode, "<h1>\u{1f310}</h1>", "\u{1f310}\n=="),
         (header_ignore_empty, "<h1></h1>", ""),
-        (header_escapes, "<h1>foo `bar` baz</h1>", "foo \\`bar\\` baz\n==============="),
+        (
+            header_escapes,
+            "<h1>foo `bar` baz</h1>",
+            "foo \\`bar\\` baz\n==============="
+        ),
         (header_h2, "<h2>header</h2>", "header\n------"),
         (header_h3, "<h3>header</h3>", "### header"),
-        (header_h3_long, "<h3>header header header header header header header header header header header header</h3>", "### header header header header header header header header header header header\n    header"),
+        (
+            header_h3_long,
+            "<h3>header header header header header header header header header header header header</h3>",
+            "### header header header header header header header header header header header\n    header"
+        ),
         (header_h3_empty, "<h3></h3>", ""),
-        (img_escape_alt, "<img src=\"/foo.png\" alt=\"bar_baz\">", "![bar\\_baz](https://example.com/foo.png)"),
-        (img_url_is_raw, "<img src=\"/foo_bar.png\" alt=\"baz\">", "![baz](https://example.com/foo_bar.png)"),
+        (
+            img_escape_alt,
+            "<img src=\"/foo.png\" alt=\"bar_baz\">",
+            "![bar\\_baz](https://example.com/foo.png)"
+        ),
+        (
+            img_url_is_raw,
+            "<img src=\"/foo_bar.png\" alt=\"baz\">",
+            "![baz](https://example.com/foo_bar.png)"
+        ),
         (ol, "<ol><li>foo</li><li>bar</li></ol>", "1. foo\n2. bar"),
-        (ol_whitespace, "<ol> <li>foo</li> <li>bar</li> <li>baz</li> <li>quux</li> <li>not ten</li> </ol>", "1. foo\n2. bar\n3. baz\n4. quux\n5. not ten"),
-        (ol_empty_item, "<ol><li>foo</li><li></li><li>bar</li></ol>", "1. foo\n2.\n3. bar"),
-        (ol_ten, "<ol><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li><li>6</li><li>7</li><li>8</li><li>9</li><li>10</li></ol>", " 1. 1\n 2. 2\n 3. 3\n 4. 4\n 5. 5\n 6. 6\n 7. 7\n 8. 8\n 9. 9\n10. 10"),
+        (
+            ol_whitespace,
+            "<ol> <li>foo</li> <li>bar</li> <li>baz</li> <li>quux</li> <li>not ten</li> </ol>",
+            "1. foo\n2. bar\n3. baz\n4. quux\n5. not ten"
+        ),
+        (
+            ol_empty_item,
+            "<ol><li>foo</li><li></li><li>bar</li></ol>",
+            "1. foo\n2.\n3. bar"
+        ),
+        (
+            ol_ten,
+            "<ol><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li><li>6</li><li>7</li><li>8</li><li>9</li><li>10</li></ol>",
+            " 1. 1\n 2. 2\n 3. 3\n 4. 4\n 5. 5\n 6. 6\n 7. 7\n 8. 8\n 9. 9\n10. 10"
+        ),
         (pre, "<pre>\nfoo\n    bar\n</pre>", "```\nfoo\n    bar\n```"),
-        (pre_no_whitespace_compress, "<pre>\nfoo  bar\n</pre>", "```\nfoo  bar\n```"),
+        (
+            pre_no_whitespace_compress,
+            "<pre>\nfoo  bar\n</pre>",
+            "```\nfoo  bar\n```"
+        ),
         (pre_no_newline, "<pre>\n  foo</pre>", "```\n  foo\n```"),
-        (pre_following_text, "foo bar<pre>baz</pre>", "foo bar\n\n```\nbaz\n```"),
-        (pre_in_p, "<p>foo <pre>\nbar\n</pre>baz</p>", "foo\n\n```\nbar\n```\n\nbaz"),
-        (pre_language, "<pre><code class=\"language-foo bar\">foo\n    bar\n</code></pre>", "```foo\nfoo\n    bar\n```"),
+        (
+            pre_following_text,
+            "foo bar<pre>baz</pre>",
+            "foo bar\n\n```\nbaz\n```"
+        ),
+        (
+            pre_in_p,
+            "<p>foo <pre>\nbar\n</pre>baz</p>",
+            "foo\n\n```\nbar\n```\n\nbaz"
+        ),
+        (
+            pre_language,
+            "<pre><code class=\"language-foo bar\">foo\n    bar\n</code></pre>",
+            "```foo\nfoo\n    bar\n```"
+        ),
         (pre_br, "<pre>foo<br>bar</pre>", "```\nfoo\nbar\n```"),
-        (pre_br_twice, "<blockquote><pre>foo<br><br>bar</pre></blockquote>", "> ```\n> foo\n>\n> bar\n> ```"),
-        (table, "<table><tr><td>1a</td><td>1b</td></tr><tr><td>2a</td><td>2b</td></tr></table>", "1a | 1b\n2a | 2b"),
+        (
+            pre_br_twice,
+            "<blockquote><pre>foo<br><br>bar</pre></blockquote>",
+            "> ```\n> foo\n>\n> bar\n> ```"
+        ),
+        (
+            table,
+            "<table><tr><td>1a</td><td>1b</td></tr><tr><td>2a</td><td>2b</td></tr></table>",
+            "1a | 1b\n2a | 2b"
+        ),
         (ul, "<ul><li>foo</li><li>bar</li></ul>", "* foo\n* bar"),
-        (ul_empty_item, "<ul><li>foo</li><li><li>bar</li></ul>", "* foo\n*\n* bar"),
-        (ul_nested, "<ul><li>foo</li><li><ul><li>bar</li><li>baz</li></ul></li><li>quux</li></ul>", "* foo\n* * bar\n  * baz\n* quux"),
-        (ul_nested_whitespace, "<ul><li>foo</li><li>before<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\nafter</li><li>quux</li></ul>", "* foo\n* before\n  * bar\n  * baz\n  after\n* quux"),
-        (ul_pre, "<ul><li>foo</li><li><pre>bar</pre></li><li>baz</li></ul>", "* foo\n* ```\n  bar\n  ```\n* baz"),
+        (
+            ul_empty_item,
+            "<ul><li>foo</li><li><li>bar</li></ul>",
+            "* foo\n*\n* bar"
+        ),
+        (
+            ul_nested,
+            "<ul><li>foo</li><li><ul><li>bar</li><li>baz</li></ul></li><li>quux</li></ul>",
+            "* foo\n* * bar\n  * baz\n* quux"
+        ),
+        (
+            ul_nested_whitespace,
+            "<ul><li>foo</li><li>before<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\nafter</li><li>quux</li></ul>",
+            "* foo\n* before\n  * bar\n  * baz\n  after\n* quux"
+        ),
+        (
+            ul_pre,
+            "<ul><li>foo</li><li><pre>bar</pre></li><li>baz</li></ul>",
+            "* foo\n* ```\n  bar\n  ```\n* baz"
+        ),
         (script, "foo <script>bar</script>baz", "foo baz"),
-        (cthulhu, "<p>foo<blockquote>bar<ul><li>baz</li><li><pre>quux</pre></li><li><blockquote>foo<pre>bar</pre>baz</blockquote></li></ul></blockquote>quux</p>", "foo\n\n> bar\n> * baz\n> * ```\n>   quux\n>   ```\n> * > foo\n>   > ```\n>   > bar\n>   > ```\n>   > baz\n\nquux"),
+        (
+            cthulhu,
+            "<p>foo<blockquote>bar<ul><li>baz</li><li><pre>quux</pre></li><li><blockquote>foo<pre>bar</pre>baz</blockquote></li></ul></blockquote>quux</p>",
+            "foo\n\n> bar\n> * baz\n> * ```\n>   quux\n>   ```\n> * > foo\n>   > ```\n>   > bar\n>   > ```\n>   > baz\n\nquux"
+        ),
     );
 }
