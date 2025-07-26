@@ -74,7 +74,12 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                     .into_iter()
                     .map(|item| Item {
                         url: format!("https://bsky.app/profile/{}", item.subject.handle),
-                        title: Some(item.subject.display_name.unwrap_or(item.subject.handle)),
+                        title: Some(
+                            item.subject
+                                .display_name
+                                .filter(|name| !name.is_empty())
+                                .unwrap_or(item.subject.handle),
+                        ),
                         description: Some(item.subject.description),
                     })
                     .collect(),
@@ -131,7 +136,10 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                 title: None,
                 before: vec![],
                 main: Post {
-                    author: profile.display_name.unwrap_or(profile.handle),
+                    author: profile
+                        .display_name
+                        .filter(|name| !name.is_empty())
+                        .unwrap_or(profile.handle),
                     body: profile.description,
                     urls: vec![],
                 },
@@ -280,7 +288,11 @@ impl PostView {
             .collect();
         urls.extend(self.embed.map(Embed::urls).unwrap_or_default());
         Post {
-            author: self.author.display_name.unwrap_or(self.author.handle),
+            author: self
+                .author
+                .display_name
+                .filter(|name| !name.is_empty())
+                .unwrap_or(self.author.handle),
             body: self.record.text,
             urls,
         }
