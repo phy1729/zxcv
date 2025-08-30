@@ -104,9 +104,9 @@ fn compute_widths(
         return column_stats.into_iter().map(|stat| stat.min).collect();
     }
 
-    column_stats
-        .iter_mut()
-        .for_each(|stat| stat.avg = std::cmp::max(stat.avg, stat.min));
+    for stat in &mut column_stats {
+        stat.avg = std::cmp::max(stat.avg, stat.min);
+    }
 
     let avg_total = column_stats.iter().map(|stat| stat.avg).sum::<usize>() + col_sep_width;
     match avg_total.cmp(&max_width) {
