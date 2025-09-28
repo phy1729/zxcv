@@ -56,10 +56,9 @@ pub(crate) fn try_process(
     url: &Url,
     tree: &Html,
 ) -> Option<anyhow::Result<Content>> {
-    if html::select_single_element(tree, "meta[name=\"keywords\"]")
+    if !html::select_single_element(tree, "meta[name=\"keywords\"]")
         .and_then(|e| e.attr("content"))
-        .map(|c| c.split(',').any(|t| t == "forgejo" || t == "gitea"))
-        != Some(true)
+        .is_some_and(|c| c.split(',').any(|t| t == "forgejo" || t == "gitea"))
     {
         return None;
     }

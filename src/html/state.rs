@@ -110,7 +110,7 @@ impl<'s> Block<'s> {
         if s.chars().all(is_whitespace) {
             self.pending_whitespace |= !s.is_empty();
         } else {
-            self.pending_whitespace |= s.chars().next().map(is_whitespace) == Some(true);
+            self.pending_whitespace |= s.chars().next().is_some_and(is_whitespace);
             self.pre_push();
 
             if self.in_code {
@@ -121,7 +121,7 @@ impl<'s> Block<'s> {
                     .extend(EscapeMarkdown::new(SqueezeWhitespace::new(s.chars())));
             }
 
-            self.pending_whitespace = s.chars().last().map(is_whitespace) == Some(true);
+            self.pending_whitespace = s.chars().last().is_some_and(is_whitespace);
         }
     }
 

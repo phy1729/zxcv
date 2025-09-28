@@ -15,10 +15,9 @@ pub(crate) fn try_process(
     url: &Url,
     tree: &Html,
 ) -> Option<anyhow::Result<Content>> {
-    if html::select_single_element(tree, "meta[name=\"generator\"]")
+    if !html::select_single_element(tree, "meta[name=\"generator\"]")
         .and_then(|e| e.attr("content"))
-        .map(|c| c.starts_with("Discourse "))
-        != Some(true)
+        .is_some_and(|c| c.starts_with("Discourse "))
     {
         return None;
     }
