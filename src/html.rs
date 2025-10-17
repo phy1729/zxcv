@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::num::NonZeroUsize;
 
 use ego_tree::NodeRef;
+use scraper::CaseSensitivity;
 use scraper::ElementRef;
 use scraper::Html;
 use scraper::Node;
@@ -266,6 +267,38 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 });
                 block.ensure_newline();
                 block.push("```");
+            }
+
+            "semantics" => {
+                let render_node = if let Some(annotation) = node.children().find(|n| {
+                    if let Node::Element(e) = n.value()
+                        && e.name() == "annotation"
+                        && e.attr("encoding") == Some("application/x-tex")
+                    {
+                        true
+                    } else {
+                        false
+                    }
+                }) {
+                    annotation
+                } else if let Some(child) = node.first_child() {
+                    child
+                } else {
+                    node
+                };
+                render_node
+                    .children()
+                    .for_each(|node| render_node_inner(node, url, block));
+            }
+
+            "span" => {
+                if e.has_class("katex-html", CaseSensitivity::CaseSensitive)
+                    && e.attr("aria-hidden") == Some("true")
+                {
+                } else {
+                    node.children()
+                        .for_each(|node| render_node_inner(node, url, block));
+                }
             }
 
             "table" => {
@@ -573,6 +606,11 @@ mod tests {
             cthulhu,
             "<p>foo<blockquote>bar<ul><li>baz</li><li><pre>quux</pre></li><li><blockquote>foo<pre>bar</pre>baz</blockquote></li></ul></blockquote>quux</p>",
             "foo\n\n> bar\n> * baz\n> * ```\n>   quux\n>   ```\n> * > foo\n>   > ```\n>   > bar\n>   > ```\n>   > baz\n\nquux"
+        ),
+        (
+            katex,
+            "<span class=\"katex\"><span class=\"katex-mathml\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mrow><mi>E</mi></mrow><annotation encoding=\"application/x-tex\">E</annotation></semantics></math></span><span class=\"katex-html\" aria-hidden=\"true\"><span class=\"base\"><span class=\"strut\" style=\"height:0.6833em\"></span><span class=\"mord mathnormal\" style=\"margin-right:0.05764em\">E</span></span></span></span>",
+            "E"
         ),
     );
 }
