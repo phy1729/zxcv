@@ -359,6 +359,7 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     let final_url = Url::parse(&response.get_uri().to_string()).expect("A Uri is a valid Url");
 
     Ok(match content_type {
+        "application/json" => Content::Text(TextType::Raw(read_raw_response(response)?)),
         "application/pdf" => Content::Pdf(response.into_body().into_reader()),
         "application/vnd.apple.mpegurl" => Content::Video(final_url),
         "application/xhtml+xml" | "text/html" => process_html(
