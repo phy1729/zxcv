@@ -194,7 +194,6 @@ pub fn show_url(config: &Config, url: &str) -> anyhow::Result<()> {
     show_content(config, get_content(&mut url)?)
 }
 
-#[allow(clippy::too_many_lines)]
 fn get_content(url: &mut Url) -> anyhow::Result<Content> {
     let agent = Agent::config_builder()
         .user_agent(format!("zxcv/{}", env!("CARGO_PKG_VERSION")))
@@ -217,7 +216,7 @@ fn rewrite_url(url: &mut Url) -> bool {
         return false;
     };
 
-    #[allow(clippy::match_same_arms)]
+    #[expect(clippy::match_same_arms)]
     match hostname {
         "bpa.st" => {
             if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
@@ -227,7 +226,7 @@ fn rewrite_url(url: &mut Url) -> bool {
 
         "p.dav1d.de" => {
             if let Some((raw_path, _)) = url.path().rsplit_once('.') {
-                #[allow(clippy::unnecessary_to_owned)]
+                #[expect(clippy::unnecessary_to_owned)]
                 url.set_path(&raw_path.to_owned());
             }
         }
@@ -287,7 +286,7 @@ fn rewrite_url(url: &mut Url) -> bool {
 fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
     let hostname = url.host_str()?;
 
-    #[allow(clippy::match_same_arms)]
+    #[expect(clippy::match_same_arms)]
     match hostname {
         "bsky.app" => bsky::process(agent, url),
 

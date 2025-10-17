@@ -47,7 +47,7 @@ impl State {
     }
 }
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 pub(super) struct Block<'s> {
     state: &'s mut State,

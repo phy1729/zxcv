@@ -73,7 +73,7 @@ pub(crate) fn render_node(
     state.render()
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
     match node.value() {
         Node::Text(t) => block.push(t),

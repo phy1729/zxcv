@@ -15,7 +15,7 @@ const FILTER: &str = "!T*hPNRA69ofM1izkPP";
 
 // curl --compressed 'https://api.stackexchange.com/2.3/sites?pagesize=10000'
 // jq -r '.items[] | "        " + ([.site_url] + .aliases | map(ltrimstr("https://") | "\"" + . + "\"") | join (" | ")) + " => Some(\"" + .api_site_parameter + "\"),"'
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines)]
 #[rustfmt::skip]
 fn site_tag(hostname: &str) -> Option<&'static str> {
     match hostname {
@@ -475,7 +475,7 @@ struct Items<T> {
 
 #[derive(Debug, Deserialize)]
 struct Answer {
-    #[allow(clippy::struct_field_names)]
+    #[expect(clippy::struct_field_names)]
     answer_id: u64,
     body: String,
     owner: User,
