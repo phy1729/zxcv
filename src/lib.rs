@@ -57,7 +57,7 @@ enum Content {
     Audio(Url),
     Collection(Collection),
     Image(BodyReader<'static>),
-    Pdf(BodyReader<'static>),
+    Pdf(BodyReader<'static>, Option<NonZeroUsize>),
     Text(TextType),
     Video(Url),
 }
@@ -360,7 +360,13 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
 
     Ok(match content_type {
         "application/json" => Content::Text(TextType::Raw(read_raw_response(response)?)),
-        "application/pdf" => Content::Pdf(response.into_body().into_reader()),
+        "application/pdf" => {
+            let page = url.fragment().and_then(|f| {
+                f.split('&')
+                    .find_map(|p| p.strip_prefix("page=").and_then(|p| p.parse().ok()))
+            });
+            Content::Pdf(response.into_body().into_reader(), page)
+        }
         "application/vnd.apple.mpegurl" | "application/x-mpegURL" => Content::Video(final_url),
         "application/xhtml+xml" | "text/html" => process_html(
             agent,
@@ -465,10 +471,19 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
                 (Some(file), [('p', Some(pager))].into())
             }
 
-            Content::Image(ref mut reader) | Content::Pdf(ref mut reader) => {
+            Content::Image(ref mut reader) => {
                 let mut file = NamedTempFile::new()?;
                 io::copy(reader, &mut file)?;
                 (Some(file), [].into())
+            }
+
+            Content::Pdf(ref mut reader, page) => {
+                let mut file = NamedTempFile::new()?;
+                io::copy(reader, &mut file)?;
+                (
+                    Some(file),
+                    [('p', page.map(|p| p.to_string().into()))].into(),
+                )
             }
 
             Content::Text(text) => {

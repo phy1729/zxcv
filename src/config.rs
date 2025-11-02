@@ -20,7 +20,7 @@ use serde::Deserialize;
 /// | audio | `["mpv", "--profile=builtin-pseudo-gui", "--", "%u"]` |
 /// | collection | `["xterm", "-e", "%p", "--", "%f"]` |
 /// | image | `["mupdf", "--", "%f"]` |
-/// | pdf | `["mupdf", "--", "%f"]` |
+/// | pdf | `["mupdf", "--", "%f", "%p"]` |
 /// | text | `["xterm", "-e", "%p", "--", "%f"]` |
 /// | video | `["mpv", "--", "%u"]` |
 ///
@@ -34,6 +34,7 @@ use serde::Deserialize;
 /// | Collection | `%p` | Value of the `PAGER` environment variable or an empty string if unset. |
 /// | Image | `%f` | Filename of a temporary file containing the image. |
 /// | PDF | `%f` | Filename of a temporary file containing the PDF. |
+/// | PDF | `%p` | Page of the PDF if specified. |
 /// | Text | `%f` | Filename of a temporary file containing the text. |
 /// | Text | `%p` | Value of the `PAGER` environment variable or an empty string if unset. |
 /// | Video | `%u` | URL of the video. |
@@ -69,7 +70,7 @@ impl Default for Argv {
                 .iter()
                 .map(|&s| s.to_owned())
                 .collect(),
-            pdf: ["mupdf", "--", "%f"]
+            pdf: ["mupdf", "--", "%f", "%p"]
                 .iter()
                 .map(|&s| s.to_owned())
                 .collect(),
@@ -109,7 +110,7 @@ impl Config {
             Content::Audio(_) => &self.argv.audio,
             Content::Collection(_) => &self.argv.collection,
             Content::Image(_) => &self.argv.image,
-            Content::Pdf(_) => &self.argv.pdf,
+            Content::Pdf(..) => &self.argv.pdf,
             Content::Text(_) => &self.argv.text,
             Content::Video(_) => &self.argv.video,
         }
