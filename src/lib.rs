@@ -453,45 +453,52 @@ fn show_content(config: &Config, mut content: Content) -> anyhow::Result<()> {
         .into();
 
     // replacements are documented with Config.
-    let (file, mut replacements): (Option<NamedTempFile>, HashMap<char, OsString>) = match content {
-        Content::Audio(url) | Content::Video(url) => (None, [('u', url.as_str().into())].into()),
+    let (file, mut replacements): (Option<NamedTempFile>, HashMap<char, Option<OsString>>) =
+        match content {
+            Content::Audio(url) | Content::Video(url) => {
+                (None, [('u', Some(url.as_str().into()))].into())
+            }
 
-        Content::Collection(collection) => {
-            let mut file = NamedTempFile::new()?;
-            collection.write(&mut file)?;
-            (Some(file), [('p', pager)].into())
-        }
+            Content::Collection(collection) => {
+                let mut file = NamedTempFile::new()?;
+                collection.write(&mut file)?;
+                (Some(file), [('p', Some(pager))].into())
+            }
 
-        Content::Image(ref mut reader) | Content::Pdf(ref mut reader) => {
-            let mut file = NamedTempFile::new()?;
-            io::copy(reader, &mut file)?;
-            (Some(file), [].into())
-        }
+            Content::Image(ref mut reader) | Content::Pdf(ref mut reader) => {
+                let mut file = NamedTempFile::new()?;
+                io::copy(reader, &mut file)?;
+                (Some(file), [].into())
+            }
 
-        Content::Text(text) => {
-            let mut file = NamedTempFile::new()?;
-            text.write(&mut file)?;
-            (Some(file), [('p', pager)].into())
-        }
-    };
+            Content::Text(text) => {
+                let mut file = NamedTempFile::new()?;
+                text.write(&mut file)?;
+                (Some(file), [('p', Some(pager))].into())
+            }
+        };
 
     if let Some(file) = &file {
-        replacements.insert('f', file.path().into());
+        replacements.insert('f', Some(file.path().into()));
     }
 
     let mut command = Command::new(&argv[0]);
     command.args(
         argv[1..]
             .iter()
-            .map(|arg| {
+            .filter_map(|arg| {
                 if arg.chars().count() == 2 && arg.starts_with('%') {
                     let char = arg.chars().nth(1).expect("length checked above");
-                    replacements
-                        .get(&char)
-                        .ok_or_else(|| anyhow!("%{char} is not valid for this content type"))
-                        .map(AsRef::as_ref)
+                    Some(
+                        replacements
+                            .get(&char)
+                            .map(Option::as_deref)
+                            .ok_or_else(|| anyhow!("%{char} is not valid for this content type"))
+                            .transpose()?
+                            .map(AsRef::as_ref),
+                    )
                 } else {
-                    Ok(arg.as_ref())
+                    Some(Ok(arg.as_ref()))
                 }
             })
             .collect::<anyhow::Result<Vec<&OsStr>>>()?,
