@@ -222,6 +222,24 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 }
             }
 
+            "noscript" => {
+                // HTML inside noscript is not parsed.
+                // https://github.com/rust-scraper/scraper/issues/123
+                let Ok([Node::Text(inner)]): Result<[&Node; 1], _> = node
+                    .children()
+                    .map(|n| n.value())
+                    .collect::<Vec<_>>()
+                    .try_into()
+                else {
+                    panic!("noscript element does not have exactly one Text child");
+                };
+                render_node_inner(
+                    *Html::parse_fragment(&inner.text).root_element(),
+                    url,
+                    block,
+                );
+            }
+
             "ol" => {
                 let child_count = node
                     .children()
@@ -530,6 +548,11 @@ mod tests {
             img_url_is_raw,
             "<img src=\"/foo_bar.png\" alt=\"baz\">",
             "![baz](https://example.com/foo_bar.png)"
+        ),
+        (
+            noscript,
+            "foo <noscript><strong>bar</strong> baz</noscript>",
+            "foo **bar** baz"
         ),
         (ol, "<ol><li>foo</li><li>bar</li></ol>", "1. foo\n2. bar"),
         (
