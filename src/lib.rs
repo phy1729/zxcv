@@ -232,14 +232,22 @@ fn rewrite_url(url: &mut Url) -> bool {
         }
 
         "paste.debian.net" => {
-            if !url.path().starts_with("/plain") {
-                url.path_segments_mut()
-                    .expect("URL is not cannot-be-a-base")
-                    .pop_if_empty();
-                let Some(id) = url.path_segments().and_then(Iterator::last) else {
-                    return false;
-                };
-                url.set_path(&format!("/plain/{id}"));
+            url.path_segments_mut()
+                .expect("URL is not cannot-be-a-base")
+                .pop_if_empty();
+            let new_path = match url
+                .path_segments()
+                .map(Iterator::collect::<Vec<_>>)
+                .as_deref()
+            {
+                Some([id]) => Some(format!("/plain/{id}")),
+                Some(["hidden", id]) => Some(format!("/plainh/{id}")),
+                Some(["plain", _id]) => None,
+                Some(["plainh", _id]) => None,
+                _ => return false,
+            };
+            if let Some(new_path) = new_path {
+                url.set_path(&new_path);
             }
         }
 
@@ -591,6 +599,11 @@ mod tests {
             paste_debian_net,
             "https://paste.debian.net/1729/",
             "https://paste.debian.net/plain/1729"
+        ),
+        (
+            paste_debian_net_hidden,
+            "https://paste.debian.net/hidden/1729/",
+            "https://paste.debian.net/plainh/1729"
         ),
         (
             dpaste_com,
