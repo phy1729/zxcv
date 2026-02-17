@@ -225,19 +225,21 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             "noscript" => {
                 // HTML inside noscript is not parsed.
                 // https://github.com/rust-scraper/scraper/issues/123
-                let Ok([Node::Text(inner)]): Result<[&Node; 1], _> = node
-                    .children()
-                    .map(|n| n.value())
-                    .collect::<Vec<_>>()
-                    .try_into()
-                else {
-                    panic!("noscript element does not have exactly one Text child");
-                };
-                render_node_inner(
-                    *Html::parse_fragment(&inner.text).root_element(),
-                    url,
-                    block,
-                );
+                if node.has_children() {
+                    let Ok([Node::Text(inner)]): Result<[&Node; 1], _> = node
+                        .children()
+                        .map(|n| n.value())
+                        .collect::<Vec<_>>()
+                        .try_into()
+                    else {
+                        panic!("noscript element does not have exactly one Text child");
+                    };
+                    render_node_inner(
+                        *Html::parse_fragment(&inner.text).root_element(),
+                        url,
+                        block,
+                    );
+                }
             }
 
             "ol" => {
@@ -554,6 +556,7 @@ mod tests {
             "foo <noscript><strong>bar</strong> baz</noscript>",
             "foo **bar** baz"
         ),
+        (noscript_empty, "<noscript></noscript>", ""),
         (ol, "<ol><li>foo</li><li>bar</li></ol>", "1. foo\n2. bar"),
         (
             ol_whitespace,
