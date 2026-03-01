@@ -216,8 +216,13 @@ fn rewrite_url(url: &mut Url) -> bool {
         return false;
     };
 
-    #[expect(clippy::match_same_arms)]
     match hostname {
+        "dpaste.org" | "paste.mozilla.org" | "pastebin.mozilla.org" => {
+            if !url.path().ends_with("/raw") {
+                url.set_path(&(url.path().to_owned() + "/raw"));
+            }
+        }
+
         "bpa.st" => {
             if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
                 url.set_path(&(url.path().to_owned() + "/raw"));
@@ -257,12 +262,6 @@ fn rewrite_url(url: &mut Url) -> bool {
             }
         }
 
-        "dpaste.org" => {
-            if !url.path().ends_with("/raw") {
-                url.set_path(&(url.path().to_owned() + "/raw"));
-            }
-        }
-
         "marc.info" => {
             if url.query_pairs().any(|(k, _)| k == "q") {
                 let pairs: Vec<_> = url
@@ -273,12 +272,6 @@ fn rewrite_url(url: &mut Url) -> bool {
                 url.query_pairs_mut().clear().extend_pairs(pairs);
             }
             url.query_pairs_mut().append_pair("q", "mbox");
-        }
-
-        "paste.mozilla.org" | "pastebin.mozilla.org" => {
-            if !url.path().ends_with("/raw") {
-                url.set_path(&(url.path().to_owned() + "/raw"));
-            }
         }
 
         "pastebin.com" => {
