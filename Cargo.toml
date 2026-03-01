@@ -25,12 +25,12 @@ percent-encoding = "2.3.1"
 pledge = "0.4"
 scraper = { version = "0.25", default-features = false }
 # Increased for toml and ureq
-serde = { version = "1.0.204", features = ["derive"] }
+serde = { version = "1.0.225", features = ["derive"] }
 # Increased for ureq
 serde_json = "1.0.120"
 tempfile = "3"
 textwrap = "0.16"
-toml = { version = "0.9", default-features = false, features = ["parse", "serde"] }
+toml = { version = "1", default-features = false, features = ["parse", "serde"] }
 unicode-width = "0.2"
 ureq = { version = "3", features = ["json"] }
 # Increased for ureq
