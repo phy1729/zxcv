@@ -223,6 +223,12 @@ fn rewrite_url(url: &mut Url) -> bool {
             }
         }
 
+        "pastebin.com" | "pastes.io" => {
+            if !url.path().starts_with("/raw") {
+                url.set_path(&("/raw".to_owned() + url.path()));
+            }
+        }
+
         "bpa.st" => {
             if !(url.path().starts_with("/raw/") || url.path().ends_with("/raw")) {
                 url.set_path(&(url.path().to_owned() + "/raw"));
@@ -274,11 +280,6 @@ fn rewrite_url(url: &mut Url) -> bool {
             url.query_pairs_mut().append_pair("q", "mbox");
         }
 
-        "pastebin.com" => {
-            if !url.path().starts_with("/raw") {
-                url.set_path(&("/raw".to_owned() + url.path()));
-            }
-        }
         _ => return false,
     }
     true
@@ -622,6 +623,11 @@ mod tests {
             pastebin_com,
             "https://pastebin.com/example",
             "https://pastebin.com/raw/example"
+        ),
+        (
+            pastes_io,
+            "https://pastes.io/example",
+            "https://pastes.io/raw/example"
         ),
     );
 
