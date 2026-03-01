@@ -28,7 +28,9 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
             && let Some(acct) = path_segments[0].strip_prefix('@')
         {
             Path::Profile { acct }
-        } else if path_segments.len() == 2 && path_segments[0].starts_with('@') {
+        } else if path_segments.len() == 2
+            && (path_segments[0] == "notice" || path_segments[0].starts_with('@'))
+        {
             Path::Status {
                 status_id: path_segments[1],
             }
@@ -195,6 +197,13 @@ mod tests {
     parse_path_tests!(
         super::parse_path,
         "https://example.com{}",
+        (
+            notice,
+            "/notice/17291729",
+            Some(Path::Status {
+                status_id: "17291729"
+            })
+        ),
         (
             profile,
             "/@example",
