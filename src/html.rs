@@ -226,11 +226,11 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                 // HTML inside noscript is not parsed.
                 // https://github.com/rust-scraper/scraper/issues/123
                 if node.has_children() {
-                    let Ok([Node::Text(inner)]): Result<[&Node; 1], _> = node
+                    let [Node::Text(inner)]: &[&Node] = node
                         .children()
                         .map(|n| n.value())
                         .collect::<Vec<_>>()
-                        .try_into()
+                        .as_ref()
                     else {
                         panic!("noscript element does not have exactly one Text child");
                     };

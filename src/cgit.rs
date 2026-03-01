@@ -24,7 +24,7 @@ pub(crate) fn try_process(
         .select(&selector)
         .filter(|e| e.inner_html() == "summary")
         .collect();
-    let Ok([summary_link]): Result<[_; 1], _> = summary_links.try_into() else {
+    let [summary_link] = summary_links[..] else {
         return None;
     };
     let repo_path = summary_link
