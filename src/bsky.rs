@@ -80,7 +80,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                                 .filter(|name| !name.is_empty())
                                 .unwrap_or(item.subject.handle),
                         ),
-                        description: Some(item.subject.description),
+                        description: item.subject.description,
                     })
                     .collect(),
             }))
@@ -140,7 +140,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                         .display_name
                         .filter(|name| !name.is_empty())
                         .unwrap_or(profile.handle),
-                    body: profile.description,
+                    body: profile.description.unwrap_or_default(),
                     urls: vec![],
                 },
                 after: posts.feed.into_iter().map(|p| p.post.render()).collect(),
@@ -196,7 +196,7 @@ struct ProfileView {
     handle: String,
     #[serde(rename = "displayName")]
     display_name: Option<String>,
-    description: String,
+    description: Option<String>,
 }
 
 // app.bsky.actor.defs#profileViewBasic
