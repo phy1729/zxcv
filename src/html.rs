@@ -123,6 +123,9 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
                             block.push_raw_end(")");
                         }
                     }
+                } else {
+                    node.children()
+                        .for_each(|node| render_node_inner(node, url, block));
                 }
             }
 
@@ -439,6 +442,7 @@ mod tests {
             "<a href=\"#fn-1\">[1]</a>",
             "[[1]](#fn-1)"
         ),
+        (link_id_only, "<a id=\"example\">Example</a>", "Example"),
         (strong, "foo <strong>bar</strong> baz", "foo **bar** baz"),
         (
             strong_leading_space,
