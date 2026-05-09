@@ -358,7 +358,10 @@ fn process_generic(agent: &Agent, url: &Url) -> anyhow::Result<Content> {
     else {
         bail!("Missing Content-Type header");
     };
-    let final_url = Url::parse(&response.get_uri().to_string()).expect("A Uri is a valid Url");
+    let mut final_url = Url::parse(&response.get_uri().to_string()).expect("A Uri is a valid Url");
+    if final_url.fragment().is_none() {
+        final_url.set_fragment(url.fragment());
+    }
 
     Ok(match content_type {
         "application/json" => Content::Text(TextType::Raw(read_raw_response(response)?)),
