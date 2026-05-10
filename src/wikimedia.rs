@@ -35,17 +35,17 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
             bail!("Unexpected wikimedia revisions {:?}", page.revisions);
         };
 
-        if let Some(slot) = revision.slots.remove("main") {
-            Ok(Content::Text(TextType::Article(Article {
-                title: page.title,
-                body: textwrap::fill(&slot.star, LINE_LENGTH),
-            })))
-        } else {
+        let Some(slot) = revision.slots.remove("main") else {
             bail!(
                 "Wikimedia revision lacks main slot. {:?}",
                 page.revisions[0].slots
             );
-        }
+        };
+
+        Ok(Content::Text(TextType::Article(Article {
+            title: page.title,
+            body: textwrap::fill(&slot.star, LINE_LENGTH),
+        })))
     })())
 }
 
