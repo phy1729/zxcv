@@ -330,7 +330,7 @@ fn process_specific(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Conte
 
         "vimeo.com" => Some(Ok(Content::Video(url.clone()))),
 
-        "en.wikipedia.org" => wikimedia::process(agent, url),
+        "commons.wikimedia.org" | "en.wikipedia.org" => wikimedia::process(agent, url),
 
         "xkcd.com" | "m.xkcd.com" => Some(image_via_selector(agent, url, "#comic img")),
 
