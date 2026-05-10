@@ -82,7 +82,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
         Node::Element(e) => match e.name() {
             "a" => {
                 if let Some(link) = e.attr("href") {
-                    let mut sub_state = State::new(block.max_width());
+                    let mut sub_state = State::new(None);
                     node.children()
                         .fold(&mut sub_state.root_block(), |block, node| {
                             render_node_inner(node, url, block);
