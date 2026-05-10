@@ -168,7 +168,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             }
 
             "h1" | "h2" => {
-                let mut sub_state = State::new(block.max_width());
+                let mut sub_state = State::new(block.width());
                 node.children()
                     .fold(&mut sub_state.root_block(), |block, node| {
                         render_node_inner(node, url, block);
@@ -327,7 +327,7 @@ fn render_node_inner(node: NodeRef<'_, Node>, url: &Url, block: &mut Block) {
             "table" => {
                 let mut block = block.new_raw_block();
                 let table = ElementRef::wrap(node).expect("Node is Node::Element");
-                block.push(&render_table(table, url, block.max_width()));
+                block.push(&render_table(table, url, block.width()));
             }
 
             "ul" => {
@@ -530,6 +530,11 @@ mod tests {
             "<h1>header header header header header header header header header header header header</h1>",
             "header header header header header header header header header header header\nheader\n============================================================================"
         ),
+        (
+            header_h1_long_in_list,
+            "<ol><li><h2>header header header header header header header header header header header header</h2></li><ol>",
+            "1. header header header header header header header header header header header\n   header\n   ----------------------------------------------------------------------------"
+        ),
         (header_unicode, "<h1>\u{1f310}</h1>", "\u{1f310}\n=="),
         (header_ignore_empty, "<h1></h1>", ""),
         (
@@ -609,6 +614,11 @@ mod tests {
             table,
             "<table><tr><td>1a</td><td>1b</td></tr><tr><td>2a</td><td>2b</td></tr></table>",
             "1a | 1b\n2a | 2b"
+        ),
+        (
+            table_in_list,
+            "<ol><li><table><tr><td>1a</td><td>1b</td></tr><tr><td>2a</td><td>2b</td></tr></table></li></ol>",
+            "1. 1a | 1b\n   2a | 2b"
         ),
         (ul, "<ul><li>foo</li><li>bar</li></ul>", "* foo\n* bar"),
         (

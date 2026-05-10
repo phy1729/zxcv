@@ -45,6 +45,14 @@ impl State {
         debug_assert!(self.pending.is_empty());
         self.result
     }
+
+    fn width(&self) -> Option<NonZeroUsize> {
+        self.max_width.map(|mw| {
+            std::cmp::max(mw.get().saturating_sub(self.initial_prefix.width()), 20)
+                .try_into()
+                .expect("minimum value is non-zero")
+        })
+    }
 }
 
 #[expect(clippy::struct_excessive_bools)]
@@ -60,8 +68,8 @@ pub(super) struct Block<'s> {
 }
 
 impl<'s> Block<'s> {
-    pub fn max_width(&self) -> Option<NonZeroUsize> {
-        self.state.max_width
+    pub fn width(&self) -> Option<NonZeroUsize> {
+        self.state.width()
     }
 
     pub fn prefix(&mut self, initial_prefix: &'s str, subsequent_prefix: &'s str) {
@@ -258,8 +266,8 @@ pub(super) struct RawBlock<'s> {
 }
 
 impl RawBlock<'_> {
-    pub fn max_width(&self) -> Option<NonZeroUsize> {
-        self.state.max_width
+    pub fn width(&self) -> Option<NonZeroUsize> {
+        self.state.width()
     }
 
     pub fn push(&mut self, s: &str) {
