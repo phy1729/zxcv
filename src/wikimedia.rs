@@ -9,6 +9,7 @@ use crate::Article;
 use crate::Content;
 use crate::LINE_LENGTH;
 use crate::TextType;
+use crate::process_generic;
 
 pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content>> {
     let api_url = url.join("/w/api.php").expect("URL is valid");
@@ -16,36 +17,58 @@ pub(crate) fn process(agent: &Agent, url: &Url) -> Option<anyhow::Result<Content
 
     Some((|| {
         let title = percent_encoding::percent_decode_str(raw_title).decode_utf8()?;
-        let response: Response<RevisionPage> = agent
-            .get(api_url.as_str())
-            .query_pairs([
-                ("action", "query"),
-                ("format", "json"),
-                ("titles", &title),
-                ("prop", "revisions"),
-                ("rvprop", "content"),
-                ("rvslots", "main"),
-            ])
-            .call()?
-            .body_mut()
-            .read_json()?;
+        if title.starts_with("File:") {
+            let response: Response<ImageInfoPage> = agent
+                .get(api_url.as_str())
+                .query_pairs([
+                    ("action", "query"),
+                    ("format", "json"),
+                    ("titles", &title),
+                    ("prop", "imageinfo"),
+                    ("iiprop", "url"),
+                ])
+                .call()?
+                .body_mut()
+                .read_json()?;
 
-        let mut page = response.get_page()?;
-        let [ref mut revision] = page.revisions[..] else {
-            bail!("Unexpected wikimedia revisions {:?}", page.revisions);
-        };
+            let page = response.get_page()?;
+            let [ref image_info] = page.imageinfo[..] else {
+                bail!("Unexpected wikimedia imageinfo {:?}", page.imageinfo);
+            };
 
-        let Some(slot) = revision.slots.remove("main") else {
-            bail!(
-                "Wikimedia revision lacks main slot. {:?}",
-                page.revisions[0].slots
-            );
-        };
+            process_generic(agent, &Url::parse(&image_info.url)?)
+        } else {
+            let response: Response<RevisionPage> = agent
+                .get(api_url.as_str())
+                .query_pairs([
+                    ("action", "query"),
+                    ("format", "json"),
+                    ("titles", &title),
+                    ("prop", "revisions"),
+                    ("rvprop", "content"),
+                    ("rvslots", "main"),
+                ])
+                .call()?
+                .body_mut()
+                .read_json()?;
 
-        Ok(Content::Text(TextType::Article(Article {
-            title: page.title,
-            body: textwrap::fill(&slot.star, LINE_LENGTH),
-        })))
+            let mut page = response.get_page()?;
+            let [ref mut revision] = page.revisions[..] else {
+                bail!("Unexpected wikimedia revisions {:?}", page.revisions);
+            };
+
+            let Some(slot) = revision.slots.remove("main") else {
+                bail!(
+                    "Wikimedia revision lacks main slot. {:?}",
+                    page.revisions[0].slots
+                );
+            };
+
+            Ok(Content::Text(TextType::Article(Article {
+                title: page.title,
+                body: textwrap::fill(&slot.star, LINE_LENGTH),
+            })))
+        }
     })())
 }
 
@@ -84,4 +107,14 @@ struct Revision {
 struct Slot {
     #[serde(rename = "*")]
     star: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImageInfoPage {
+    imageinfo: Vec<ImageInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImageInfo {
+    url: String,
 }
