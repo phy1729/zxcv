@@ -6,6 +6,7 @@ use anyhow::bail;
 use getopt::Opt;
 use getopt::Parser;
 use pledge::pledge_promises;
+use unveil::unveil;
 
 use zxcv::Config;
 use zxcv::show_url;
@@ -38,7 +39,13 @@ fn main() -> anyhow::Result<()> {
         bail!("One argument is required");
     };
 
-    pledge_promises!(Stdio Tmppath Inet Dns Proc Exec)
+    unveil("/", "x").or_else(unveil::Error::ignore_platform)?;
+    unveil(
+        tempfile::env::temp_dir().as_os_str().as_encoded_bytes(),
+        "rwc",
+    )
+    .or_else(unveil::Error::ignore_platform)?;
+    pledge_promises!(Stdio Rpath Wpath Cpath Inet Dns Proc Exec)
         .or_else(pledge::Error::ignore_platform)
         .expect("Initial pledge cannot fail");
 
