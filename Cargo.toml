@@ -23,7 +23,7 @@ getopt = "1"
 # Increased for ureq
 percent-encoding = "2.3.1"
 pledge = "0.4"
-scraper = { version = "0.26", default-features = false }
+scraper = { version = "0.27", default-features = false }
 # Increased for toml and ureq
 serde = { version = "1.0.225", features = ["derive"] }
 # Increased for ureq
