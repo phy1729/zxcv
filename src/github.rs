@@ -120,7 +120,7 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
                 before: vec![],
                 main: Post {
                     author: issue.user.login,
-                    body: issue.body,
+                    body: issue.body.unwrap_or_default(),
                     urls: vec![],
                 },
                 after: comments.into_iter().map(Into::into).collect(),
@@ -207,7 +207,7 @@ impl From<Comment> for Post {
 
 #[derive(Debug, Deserialize)]
 struct Issue {
-    body: String,
+    body: Option<String>,
     comments_url: String,
     title: String,
     user: User,
