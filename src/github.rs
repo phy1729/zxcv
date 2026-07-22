@@ -34,7 +34,8 @@ fn parse_path(url: &Url) -> Option<Path<'_>> {
         Path::Repo(path_segments[0], path_segments[1])
     } else if path_segments.len() >= 4 && path_segments[2] == "assets" {
         Path::Raw(url)
-    } else if path_segments.len() >= 5 && path_segments[2] == "blob" {
+    } else if path_segments.len() >= 5 && (path_segments[2] == "blob" || path_segments[2] == "edit")
+    {
         Path::Blob(
             path_segments[0],
             path_segments[1],
@@ -280,6 +281,11 @@ mod tests {
             compare_patch,
             "/foo/bar/compare/06c106c106c1...c106c106c106.patch",
             Some(Path::Compare("foo", "bar", "06c106c106c1...c106c106c106"))
+        ),
+        (
+            edit,
+            "/foo/bar/edit/ref/some/path",
+            Some(Path::Blob("foo", "bar", "/some/path", "ref"))
         ),
         (
             issue,
