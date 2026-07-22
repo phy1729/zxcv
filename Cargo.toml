@@ -15,7 +15,8 @@ include = [
 ]
 
 [dependencies]
-anyhow = "1.0.14"
+# Increased for semicolon_in_expressions_from_macros
+anyhow = "1.0.34"
 # Increased for ureq
 base64 = "0.22.1"
 ego-tree = "0.11"
