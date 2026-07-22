@@ -219,6 +219,17 @@ struct ViewExternal {
     uri: String,
 }
 
+// app.bsky.embed.gallery#view
+#[derive(Debug, Deserialize)]
+struct Gallery {
+    items: Vec<GalleryItems>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GalleryItems {
+    fullsize: String,
+}
+
 // app.bsky.embed.images#view
 #[derive(Debug, Deserialize)]
 struct Images {
@@ -304,20 +315,23 @@ impl PostView {
 enum Embed {
     #[serde(rename = "app.bsky.embed.images#view")]
     Images(Images),
+    #[serde(rename = "app.bsky.embed.video#view")]
+    Video(Video),
+    #[serde(rename = "app.bsky.embed.gallery#view")]
+    Gallery(Gallery),
     #[serde(rename = "app.bsky.embed.external#view")]
     External(External),
     #[serde(rename = "app.bsky.embed.record#view")]
     Record(EmbedRecord),
     #[serde(rename = "app.bsky.embed.recordWithMedia#view")]
     RecordWithMedia(RecordWithMedia),
-    #[serde(rename = "app.bsky.embed.video#view")]
-    Video(Video),
 }
 
 impl Embed {
     fn urls(self) -> Vec<String> {
         match self {
             Self::External(e) => vec![e.external.uri],
+            Self::Gallery(g) => g.items.into_iter().map(|i| i.fullsize).collect(),
             Self::Images(i) => i.images.into_iter().map(|i| i.fullsize).collect(),
             Self::Record(_) => vec![],
             Self::RecordWithMedia(r) => match r.media {
