@@ -100,8 +100,8 @@ pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Con
 
             let mut thread_view = match thread.thread {
                 PostViewEnum::Thread(t) => t,
-                PostViewEnum::NotFound(_) => bail!("Post could not be found"),
-                PostViewEnum::Blocked(_) => bail!("Post was blocked"),
+                PostViewEnum::NotFound => bail!("Post could not be found"),
+                PostViewEnum::Blocked => bail!("Post was blocked"),
             };
 
             let mut parents: Vec<_> = thread_view
@@ -180,13 +180,10 @@ enum PostViewEnum {
     #[serde(rename = "app.bsky.feed.defs#threadViewPost")]
     Thread(ThreadViewPost),
     #[serde(rename = "app.bsky.feed.defs#notFoundPost")]
-    NotFound(Ignore),
+    NotFound,
     #[serde(rename = "app.bsky.feed.defs#blockedPost")]
-    Blocked(Ignore),
+    Blocked,
 }
-
-#[derive(Debug, Deserialize)]
-struct Ignore {}
 
 // app.bsky.actor.defs#profileView
 // app.bsky.actor.defs#profileViewDetailed
@@ -375,7 +372,7 @@ impl Iterator for TakeParents {
     fn next(&mut self) -> Option<Self::Item> {
         let mut item = match *self.next.take()? {
             PostViewEnum::Thread(v) => Some(v),
-            PostViewEnum::NotFound(_) | PostViewEnum::Blocked(_) => None,
+            PostViewEnum::NotFound | PostViewEnum::Blocked => None,
         }?;
         self.next = item.parent.take();
         Some(item)
@@ -433,13 +430,13 @@ struct Facet {
 #[serde(tag = "$type")]
 enum FaucetFeature {
     #[serde(rename = "app.bsky.richtext.facet#mention")]
-    Mention(Ignore),
+    Mention,
     #[serde(rename = "app.bsky.richtext.facet#link")]
     Link(FacetLink),
     #[serde(rename = "app.bsky.richtext.facet#tag")]
-    Tag(Ignore),
+    Tag,
     #[serde(rename = "app.bsky.richtext.facet#byteSlice")]
-    ByteSlice(Ignore),
+    ByteSlice,
 }
 
 // app.bsky.richtext.facet#link
