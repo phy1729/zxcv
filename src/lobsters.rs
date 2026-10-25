@@ -8,19 +8,26 @@ use crate::PostThread;
 use crate::TextType;
 
 pub(crate) fn process(agent: &Agent, url: &mut Url) -> Option<anyhow::Result<Content>> {
-    if !url.path().starts_with("/s/") {
+    let path_segments: Vec<_> = url
+        .path_segments()
+        .unwrap_or_else(|| "".split('/'))
+        .collect();
+
+    if !(path_segments.len() >= 2 && path_segments[0] == "s") {
         return None;
     }
+    let story_id = path_segments[1];
 
     Some((|| {
-        if !url.path().ends_with(".json") {
-            url.path_segments_mut()
-                .expect("cannot_be_a_base is checked earlier")
-                .pop_if_empty();
-            url.set_path(&(url.path().to_owned() + ".json"));
-        }
-
-        let story: Story = agent.get(url.as_str()).call()?.body_mut().read_json()?;
+        let story: Story = agent
+            .get(
+                url.join(&format!("/s/{story_id}.json"))
+                    .expect("URL is valid")
+                    .as_str(),
+            )
+            .call()?
+            .body_mut()
+            .read_json()?;
 
         Ok(Content::Text(TextType::PostThread(PostThread {
             title: Some(story.title),
