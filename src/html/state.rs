@@ -42,7 +42,7 @@ impl State {
     }
 
     pub fn render(self) -> String {
-        debug_assert!(self.pending.is_empty());
+        debug_assert_eq!(self.pending, "");
         self.result
     }
 
