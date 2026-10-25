@@ -17,14 +17,13 @@ include = [
 [dependencies]
 # Increased for semicolon_in_expressions_from_macros
 anyhow = "1.0.34"
-# Increased for ureq
-base64 = "0.22.1"
+base64 = "0.23"
 ego-tree = "0.11"
 getopt = "1"
 # Increased for ureq
 percent-encoding = "2.3.1"
 pledge = "0.4"
-scraper = { version = "0.27", default-features = false }
+scraper = { version = "0.29", default-features = false }
 # Increased for toml and ureq
 serde = { version = "1.0.225", features = ["derive"] }
 # Increased for ureq
